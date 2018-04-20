@@ -49,8 +49,8 @@ allprojects {
     testCompile "com.obsidiandynamics.yconf:yconf-snakeyaml:${yconfVersion}"
     testCompile "junit:junit:4.12"
     testCompile "org.mockito:mockito-core:2.18.0"
+    testCompile "org.slf4j:slf4j-api:1.7.25"                                    //TODO convert to testRuntime
     testRuntime "com.obsidiandynamics.zerolog:zerolog-slf4j17:${zerologVersion}"
-    testRuntime "org.slf4j:slf4j-api:1.7.25"
     testRuntime "org.slf4j:slf4j-log4j12:1.7.25"
     testRuntime "log4j:log4j:1.2.17"
   }
@@ -122,7 +122,7 @@ task jacocoRootReport(type: JacocoReport) {
   }
 }
 
-def packageName = "hazelq-core"
+def packageName = "hazelq-common"
 
 dependencies {
   compile "com.obsidiandynamics.fulcrum:fulcrum-retry:${fulcrumVersion}"
@@ -131,6 +131,7 @@ dependencies {
   compile "com.obsidiandynamics.zerolog:zerolog-core:${zerologVersion}"
   compileOnly "com.hazelcast:hazelcast:3.10-BETA-2"
   
+  testCompile "com.hazelcast:hazelcast:3.10-BETA-2"
   testCompile "com.hazelcast:hazelcast:3.10-BETA-2:tests"
 }
 
@@ -175,7 +176,7 @@ publishing {
   }
 }
 
-def packageDesc = "Message streaming over Hazelcast IMDG"
+def packageDesc = "Common classes and utilities"
 def repoName = "hazelq"
 bintray {
   user = System.getenv(envUser)
