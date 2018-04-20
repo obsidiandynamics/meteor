@@ -3,8 +3,11 @@ version = project(":").version
 
 dependencies {
   compile project(":hazelq-elect")
+  compile "com.obsidiandynamics.fulcrum:fulcrum-node-queue:${fulcrumVersion}"
   
   testCompile project(":").sourceSets.test.output
+  testCompile "com.obsidiandynamics.fulcrum:fulcrum-testmark:${fulcrumVersion}"
+  testCompile "org.hdrhistogram:HdrHistogram:2.1.10"
 }
 
 jar {
