@@ -10,6 +10,12 @@ dependencies {
   testCompile "org.hdrhistogram:HdrHistogram:2.1.10"
 }
 
+task addLauncherApps() {
+  project(":").launcherClasspath += sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+  project(":").launcherClasses += "com.obsidiandynamics.hazelq.PubSubOneWayTest"
+  project(":").launcherClasses += "com.obsidiandynamics.hazelq.PubSubRoundTripTest"
+}
+
 jar {
   baseName packageName
 }
