@@ -5,7 +5,7 @@ import java.util.*;
 import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 
-public final class HazelcastSampleTester {
+public final class HazelcastSample {
   public static void main(String[] args) {
     final Config config = new Config()
         .setProperty("hazelcast.logging.type", "slf4j")
