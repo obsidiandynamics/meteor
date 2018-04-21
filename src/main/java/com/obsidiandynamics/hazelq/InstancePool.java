@@ -6,20 +6,29 @@ import java.util.function.*;
 import com.hazelcast.core.*;
 import com.obsidiandynamics.threads.*;
 
+/**
+ *  Pools Hazelcast instances to avoid repeated instantiation.<p>
+ *  
+ *  Instances are returned from the pool in a round-robin fashion. If more invocations
+ *  to {@link InstancePool#get()} are made than there are instances in the pool, some
+ *  instances will be shared across callers.
+ */
 public final class InstancePool {
   private final Supplier<HazelcastInstance> instanceSupplier;
   
-  private final AtomicReferenceArray<HazelcastInstance> instances;
+  private final HazelcastInstance[] instances;
+  
+  private final Object instancesLock = new Object();
   
   private final AtomicInteger position = new AtomicInteger();
   
   public InstancePool(int size, Supplier<HazelcastInstance> instanceSupplier) {
     this.instanceSupplier = instanceSupplier;
-    instances = new AtomicReferenceArray<>(size);
+    instances = new HazelcastInstance[size];
   }
   
   public int size() {
-    return instances.length();
+    return instances.length;
   }
   
   public HazelcastInstance get() {
@@ -27,7 +36,13 @@ public final class InstancePool {
   }
   
   private HazelcastInstance get(int index) {
-    return instances.updateAndGet(index, instance -> instance != null ? instance : instanceSupplier.get());
+    synchronized (instancesLock) {
+      if (instances[index] == null) {
+        return instances[index] = instanceSupplier.get();
+      } else {
+        return instances[index];
+      }
+    }
   }
   
   public void prestartAll() {
