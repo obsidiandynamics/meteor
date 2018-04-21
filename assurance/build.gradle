@@ -1,13 +1,9 @@
-def packageName = "hazelq-elect"
+def packageName = "hazelq-assurance"
 version = project(":").version
 
 dependencies {
+  compileOnly "com.hazelcast:hazelcast:${hazelcastVersion}:tests"
   compile project(":")
-  compile "org.apache.commons:commons-lang3:3.7"
-  
-  testCompile project(":")
-  testCompile project(":hazelq-assurance")
-  testCompile "nl.jqno.equalsverifier:equalsverifier:2.4.1"
 }
 
 jar {
@@ -52,7 +48,7 @@ publishing {
 
 def envUser = "BINTRAY_USER"
 def envKey = "BINTRAY_KEY"
-def packageDesc = "Leader election subsystem for HazelQ"
+def packageDesc = "Mocking components and test utilities for HazelQ"
 def repoName = "hazelq"
 bintray {
   user = System.getenv(envUser)

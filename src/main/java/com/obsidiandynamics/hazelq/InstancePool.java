@@ -11,7 +11,9 @@ import com.obsidiandynamics.threads.*;
  *  
  *  Instances are returned from the pool in a round-robin fashion. If more invocations
  *  to {@link InstancePool#get()} are made than there are instances in the pool, some
- *  instances will be shared across callers.
+ *  instances will be shared across callers.<p>
+ *  
+ *  This class is thread-safe.
  */
 public final class InstancePool {
   private final Supplier<HazelcastInstance> instanceSupplier;

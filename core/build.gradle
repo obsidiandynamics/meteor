@@ -5,7 +5,8 @@ dependencies {
   compile project(":hazelq-elect")
   compile "com.obsidiandynamics.fulcrum:fulcrum-node-queue:${fulcrumVersion}"
   
-  testCompile project(":").sourceSets.test.output
+  testCompile project(":")
+  testCompile project(":hazelq-assurance")
   testCompile "com.obsidiandynamics.fulcrum:fulcrum-testmark:${fulcrumVersion}"
   testCompile "org.hdrhistogram:HdrHistogram:2.1.10"
 }

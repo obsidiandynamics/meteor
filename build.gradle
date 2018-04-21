@@ -40,14 +40,15 @@ allprojects {
     fulcrumVersion = "0.14.0"
     yconfVersion = "0.3.1"
     zerologVersion = "0.8.0"
+    hazelcastVersion = "3.10-BETA-2"
   }
   
   dependencies {
-    compileOnly "com.hazelcast:hazelcast:3.10-BETA-2"
+    compileOnly "com.hazelcast:hazelcast:${hazelcastVersion}"
     compile "org.slf4j:slf4j-api:1.7.25"                                    //TODO convert to testRuntime
     
-    testCompile "com.hazelcast:hazelcast:3.10-BETA-2"
-    testCompile "com.hazelcast:hazelcast:3.10-BETA-2:tests"
+    testCompile "com.hazelcast:hazelcast:${hazelcastVersion}"
+    testCompile "com.hazelcast:hazelcast:${hazelcastVersion}:tests"
     testCompile "com.obsidiandynamics.fulcrum:fulcrum-assert:${fulcrumVersion}"
     testCompile "com.obsidiandynamics.fulcrum:fulcrum-await:${fulcrumVersion}"
     testCompile "com.obsidiandynamics.fulcrum:fulcrum-junit:${fulcrumVersion}"

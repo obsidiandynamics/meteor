@@ -1,5 +1,8 @@
 rootProject.name = "hazelq"
 
+include "hazelq-assurance"
+project(":hazelq-assurance").projectDir = new File(settingsDir, "assurance")
+
 include "hazelq-core"
 project(":hazelq-core").projectDir = new File(settingsDir, "core")
 
