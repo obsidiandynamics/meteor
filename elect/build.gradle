@@ -6,6 +6,7 @@ dependencies {
   compile "org.apache.commons:commons-lang3:3.7"
   
   testCompile project(":").sourceSets.test.output
+  testCompile "nl.jqno.equalsverifier:equalsverifier:2.4.1"
 }
 
 jar {

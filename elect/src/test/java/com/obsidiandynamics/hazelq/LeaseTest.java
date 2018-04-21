@@ -8,6 +8,8 @@ import org.junit.*;
 
 import com.obsidiandynamics.assertion.*;
 
+import nl.jqno.equalsverifier.*;
+
 public final class LeaseTest {
   @Test
   public void testToString() {
@@ -16,20 +18,7 @@ public final class LeaseTest {
   
   @Test
   public void testEqualsHashCode() {
-    final UUID u0 = UUID.randomUUID();
-    final UUID u1 = UUID.randomUUID();
-    final Lease l1 = new Lease(u0, 0);
-    final Lease l2 = new Lease(u1, 1);
-    final Lease l3 = new Lease(u0, 0);
-    final Lease l4 = l1;
-
-    assertNotEquals(l1, l2);
-    assertEquals(l1, l3);
-    assertEquals(l1, l4);
-    assertNotEquals(l1, new Object());
-
-    assertNotEquals(l1.hashCode(), l2.hashCode());
-    assertEquals(l1.hashCode(), l3.hashCode());
+    EqualsVerifier.forClass(Lease.class).verify();
   }
 
   @Test
@@ -80,5 +69,12 @@ public final class LeaseTest {
   @Test
   public void testExpired() {
     assertEquals(0, Lease.expired(UUID.randomUUID()).getExpiry());
+  }
+  
+  @Test
+  public void testFormatExpiry() {
+    assertEquals("eschaton", Lease.formatExpiry(Long.MAX_VALUE));
+    assertEquals("epoch", Lease.formatExpiry(0));
+    assertNotNull(Lease.formatExpiry(1));
   }
 }
