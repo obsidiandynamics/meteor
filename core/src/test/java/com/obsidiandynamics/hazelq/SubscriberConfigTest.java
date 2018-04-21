@@ -3,11 +3,11 @@ package com.obsidiandynamics.hazelq;
 import static org.junit.Assert.*;
 
 import org.junit.*;
-import org.slf4j.*;
 
 import com.hazelcast.config.*;
 import com.obsidiandynamics.assertion.*;
 import com.obsidiandynamics.func.*;
+import com.obsidiandynamics.zerolog.*;
 
 public final class SubscriberConfigTest {
   @Test
@@ -16,7 +16,7 @@ public final class SubscriberConfigTest {
     final ExceptionHandler exceptionHandler = ExceptionHandler.nop();
     final String group = "group";
     final InitialOffsetScheme initialOffsetScheme = InitialOffsetScheme.EARLIEST;
-    final Logger log = LoggerFactory.getLogger(SubscriberConfigTest.class);
+    final Zlg zlg = Zlg.forDeclaringClass().get();
     final StreamConfig streamConfig = new StreamConfig();
     final double staleReadSafetyMargin = 0.5;
     final int minLeaseExtendIntervalMillis = 500;
@@ -29,7 +29,7 @@ public final class SubscriberConfigTest {
         .withExceptionHandler(exceptionHandler)
         .withGroup(group)
         .withInitialOffsetScheme(initialOffsetScheme)
-        .withLog(log)
+        .withZlg(zlg)
         .withStreamConfig(streamConfig)
         .withStaleReadSafetyMargin(staleReadSafetyMargin)
         .withMinLeaseExtendInterval(minLeaseExtendIntervalMillis)
@@ -38,7 +38,7 @@ public final class SubscriberConfigTest {
     assertEquals(exceptionHandler, config.getExceptionHandler());
     assertEquals(group, config.getGroup());
     assertEquals(initialOffsetScheme, config.getInitialOffsetScheme());
-    assertEquals(log, config.getLog());
+    assertEquals(zlg, config.getZlg());
     assertEquals(streamConfig, config.getStreamConfig());
     assertEquals(staleReadSafetyMargin, config.getStaleReadSafetyMargin(), Double.MIN_VALUE);
     assertEquals(minLeaseExtendIntervalMillis, config.getMinLeaseExtendInterval());

@@ -5,14 +5,13 @@ import java.util.Map.*;
 import java.util.function.*;
 import java.util.stream.*;
 
-import org.slf4j.*;
-
 import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.obsidiandynamics.worker.*;
+import com.obsidiandynamics.zerolog.*;
 
 public class MapBandwidthSim {
-  private static final Logger log = LoggerFactory.getLogger(MapBandwidthSim.class);
+  private static final Zlg zlg = Zlg.forDeclaringClass().get();
   
   private MapBandwidthSim() {}
   
@@ -42,10 +41,10 @@ public class MapBandwidthSim {
       final Integer key = written % keys;
       map.replace(key, bytes, bytes);
       written++;
-      log.info("Written {}", written);
+      zlg.i("Written %,d", z -> z.arg(written));
       
       if (written == writes) {
-        log.info("Writer: terminating");
+        zlg.i("Writer: terminating");
         t.terminate();
       } else {
         Thread.sleep(writeIntervalMillis);
@@ -69,7 +68,7 @@ public class MapBandwidthSim {
     
     private void readCycle(WorkerThread t) throws InterruptedException {
       final Set<Entry<Integer, byte[]>> entrySet = map.entrySet();
-      log.info("Read {} entries", entrySet.size());
+      zlg.i("Read %,d entries", z -> z.arg(entrySet::size));
       Thread.sleep(readIntervalMillis);
     }
   }
@@ -100,9 +99,9 @@ public class MapBandwidthSim {
                       .setAsyncBackupCount(0));
 
     final InstancePool instancePool = new InstancePool(4, () -> GridHazelcastProvider.getInstance().createInstance(config));
-    log.info("Prestarting instances...");
+    zlg.i("Prestarting instances...");
     instancePool.prestartAll();
-    log.info("Instances prestarted");
+    zlg.i("Instances prestarted");
     
     new MapBandwidthSim() {{
       new TestWriter(instancePool::get, writeIntervalMillis, writes, keys, bytes);

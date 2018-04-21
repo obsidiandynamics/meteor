@@ -44,8 +44,8 @@ final class DefaultPublisher implements Publisher, Joinable {
         .withExceptionClass(HazelcastException.class)
         .withAttempts(Integer.MAX_VALUE)
         .withBackoff(100)
-        .withFaultHandler(config.getLog()::warn)
-        .withErrorHandler(config.getLog()::error);
+        .withFaultHandler(config.getZlg()::w)
+        .withErrorHandler(config.getZlg()::e);
     buffer = new RetryableRingbuffer<>(retry, StreamHelper.getRingbuffer(instance, streamConfig));
     
     publishThread = WorkerThread.builder()

@@ -1,23 +1,22 @@
 package com.obsidiandynamics.hazelq;
 
-import org.slf4j.*;
-
 import com.obsidiandynamics.yconf.*;
+import com.obsidiandynamics.zerolog.*;
 
 @Y
 public final class PublisherConfig {
   @YInject
-  private Logger log = LoggerFactory.getLogger(Publisher.class);
+  private Zlg zlg = Zlg.forDeclaringClass().get();
   
   @YInject
   private StreamConfig streamConfig = new StreamConfig();
   
-  Logger getLog() {
-    return log;
+  Zlg getZlg() {
+    return zlg;
   }
   
-  public PublisherConfig withLog(Logger log) {
-    this.log = log;
+  public PublisherConfig withZlg(Zlg zlg) {
+    this.zlg = zlg;
     return this;
   }
 

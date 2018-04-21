@@ -3,15 +3,14 @@ package com.obsidiandynamics.hazelq;
 import java.util.concurrent.*;
 import java.util.function.*;
 
-import org.slf4j.*;
-
 import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.hazelcast.ringbuffer.*;
 import com.obsidiandynamics.worker.*;
+import com.obsidiandynamics.zerolog.*;
 
 public class RingbufferBandwidthSim {
-  private static final Logger log = LoggerFactory.getLogger(RingbufferBandwidthSim.class);
+  private static final Zlg zlg = Zlg.forDeclaringClass().get();
   
   private final int messages;
   
@@ -39,10 +38,10 @@ public class RingbufferBandwidthSim {
     private void publishCycle(WorkerThread t) throws InterruptedException {
       buffer.addAsync(bytes, OverflowPolicy.OVERWRITE);
       published++;
-      log.info("Published {}", published);
+      zlg.i("Published %,d", z -> z.arg(published));
       
       if (published == messages) {
-        log.info("Publisher: terminating");
+        zlg.i("Publisher: terminating");
         t.terminate();
       } else {
         Thread.sleep(pubIntervalMillis);
@@ -72,15 +71,15 @@ public class RingbufferBandwidthSim {
         final ReadResultSet<byte[]> results = f.get(pollTimeoutMillis, TimeUnit.MILLISECONDS);
         nextSequence = results.getSequence(results.size() - 1) + 1;
         received += results.size();
-        log.info("Received {} records (total {})", results.size(), received);
+        zlg.i("Received %,d records (total %,d)", z -> z.arg(results::size).arg(received));
       } catch (ExecutionException e) {
         e.printStackTrace();
       } catch (TimeoutException e) {
-        log.info("Timed out");
+        zlg.w("Timed out");
       }
       
       if (received == messages) {
-        log.info("Subscriber: terminating");
+        zlg.i("Subscriber: terminating");
         t.terminate();
       }
     }
@@ -111,9 +110,9 @@ public class RingbufferBandwidthSim {
                              .setAsyncBackupCount(0));
 
     final InstancePool instancePool = new InstancePool(3, () -> GridHazelcastProvider.getInstance().createInstance(config));
-    log.info("Prestarting instances...");
+    zlg.i("Prestarting instances...");
     instancePool.prestartAll();
-    log.info("Instances prestarted");
+    zlg.i("Instances prestarted");
     
     new RingbufferBandwidthSim(messages) {{
       new TestPublisher(instancePool::get, pubIntervalMillis, bytes);

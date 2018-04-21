@@ -2,19 +2,18 @@ package com.obsidiandynamics.hazelq;
 
 import java.util.function.*;
 
-import org.slf4j.*;
-
 import com.obsidiandynamics.func.*;
+import com.obsidiandynamics.zerolog.*;
 
 final class LogAwareExceptionHandler implements ExceptionHandler {
-  private final Supplier<Logger> logSupplier;
+  private final Supplier<Zlg> zlgSupplier;
   
-  LogAwareExceptionHandler(Supplier<Logger> logSupplier) {
-    this.logSupplier = logSupplier;
+  LogAwareExceptionHandler(Supplier<Zlg> zlgSupplier) {
+    this.zlgSupplier = zlgSupplier;
   }
 
   @Override
   public void onException(String summary, Throwable error) {
-    logSupplier.get().warn(summary, error);
+    zlgSupplier.get().w(summary, error);
   }
 }

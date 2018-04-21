@@ -58,8 +58,8 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
         .withExceptionClass(HazelcastException.class)
         .withAttempts(Integer.MAX_VALUE)
         .withBackoff(100)
-        .withFaultHandler(config.getLog()::warn)
-        .withErrorHandler(config.getLog()::error);
+        .withFaultHandler(config.getZlg()::w)
+        .withErrorHandler(config.getZlg()::e);
     buffer = new RetryableRingbuffer<>(retry, StreamHelper.getRingbuffer(instance, streamConfig));
     
     if (config.hasGroup()) {
@@ -145,8 +145,8 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
             final long headSeq = ((StaleSequenceException) e.getCause()).getHeadSeq();
             final long safetyMargin = (long) (config.getStreamConfig().getHeapCapacity() * safetyMarginFrac);
             final long ffNextReadOffset = headSeq + safetyMargin;
-            config.getLog().warn("Sequence {} was stale (head already at {}), fast-forwarding to {}", 
-                                 nextReadOffset, headSeq, ffNextReadOffset);
+            config.getZlg().w("Sequence %,d was stale (head already at %,d), fast-forwarding to %,d", 
+                              z -> z.arg(nextReadOffset).arg(headSeq).arg(ffNextReadOffset));
             nextReadOffset = ffNextReadOffset;
           } else {
             final String serviceInfo = getServiceInfo(buffer.getRingbuffer());

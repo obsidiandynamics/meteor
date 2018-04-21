@@ -1,18 +1,17 @@
 package com.obsidiandynamics.hazelq;
 
-import org.slf4j.*;
-
 import com.hazelcast.config.*;
 import com.obsidiandynamics.func.*;
 import com.obsidiandynamics.yconf.*;
+import com.obsidiandynamics.zerolog.*;
 
 @Y
 public final class SubscriberConfig {
   @YInject
-  private Logger log = LoggerFactory.getLogger(Subscriber.class);
+  private Zlg zlg = Zlg.forDeclaringClass().get();
 
   @YInject
-  private ExceptionHandler exceptionHandler = new LogAwareExceptionHandler(this::getLog);
+  private ExceptionHandler exceptionHandler = new LogAwareExceptionHandler(this::getZlg);
 
   @YInject
   private StreamConfig streamConfig = new StreamConfig();
@@ -35,12 +34,12 @@ public final class SubscriberConfig {
   @YInject
   private MapStoreConfig mapStoreConfig = new MapStoreConfig().setEnabled(false);
 
-  Logger getLog() {
-    return log;
+  Zlg getZlg() {
+    return zlg;
   }
 
-  public SubscriberConfig withLog(Logger log) {
-    this.log = log;
+  public SubscriberConfig withZlg(Zlg zlg) {
+    this.zlg = zlg;
     return this;
   }
 
@@ -122,7 +121,7 @@ public final class SubscriberConfig {
 
   @Override
   public String toString() {
-    return SubscriberConfig.class.getSimpleName() + " [log=" + log + ", exceptionHandler=" + exceptionHandler 
+    return SubscriberConfig.class.getSimpleName() + " [exceptionHandler=" + exceptionHandler 
         + ", streamConfig=" + streamConfig
         + ", group=" + group + ", initialOffsetScheme=" + initialOffsetScheme 
         + ", electionConfig=" + electionConfig + ", staleReadSafetyMargin=" + staleReadSafetyMargin

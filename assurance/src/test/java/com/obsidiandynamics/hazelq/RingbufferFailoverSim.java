@@ -4,12 +4,11 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
 
-import org.slf4j.*;
-
 import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.hazelcast.ringbuffer.*;
 import com.obsidiandynamics.worker.*;
+import com.obsidiandynamics.zerolog.*;
 
 /**
  *  Uses a {@link NopRingbufferStore} to simulate a ringbuffer failover with loss of data.
@@ -22,7 +21,7 @@ import com.obsidiandynamics.worker.*;
  *  few cycles before data loss is observed.
  */
 public class RingbufferFailoverSim {
-  private static final Logger log = LoggerFactory.getLogger(RingbufferFailoverSim.class);
+  private static final Zlg zlg = Zlg.forDeclaringClass().get();
   
   private static final String BUFFER_NAME = "buffer0";
   
@@ -44,23 +43,23 @@ public class RingbufferFailoverSim {
       this.bytes = new byte[bytes];
       final HazelcastInstance instance = instanceMaker.get();
       buffer = instance.getRingbuffer(BUFFER_NAME);
-      log.info("serviceName={}, partitionKey={}", buffer.getServiceName(), buffer.getPartitionKey());
+      zlg.i("serviceName=%s, partitionKey=%s", z -> z.arg(buffer::getServiceName).arg(buffer::getPartitionKey));
       final Partition partition = instance.getPartitionService().getPartition(BUFFER_NAME);
-      log.info("partitionId={}, owner={}", partition.getPartitionId(), partition.getOwner());
+      zlg.i("partitionId=%s, owner=%s", z -> z.arg(partition::getPartitionId).arg(partition::getOwner));
       instance.getPartitionService().addMigrationListener(new MigrationListener() {
         @Override
         public void migrationStarted(MigrationEvent migrationEvent) {
-          log.info("Migration started {}", migrationEvent);
+          zlg.i("Migration started %s", z -> z.arg(migrationEvent));
         }
 
         @Override
         public void migrationCompleted(MigrationEvent migrationEvent) {
-          log.info("Migration compeleted {}", migrationEvent);
+          zlg.i("Migration compeleted %s", z -> z.arg(migrationEvent));
         }
 
         @Override
         public void migrationFailed(MigrationEvent migrationEvent) {
-          log.info("Migration failed {}", migrationEvent);
+          zlg.i("Migration failed %s", z -> z.arg(migrationEvent));
         }
       });
       
@@ -73,10 +72,10 @@ public class RingbufferFailoverSim {
     private void publishCycle(WorkerThread t) throws InterruptedException {
       buffer.addAsync(bytes, OverflowPolicy.OVERWRITE);
       published++;
-      log.info("Published {}", published);
+      zlg.i("Published %s", z -> z.arg(published));
       
       if (published == messages) {
-        log.info("Publisher: terminating");
+        zlg.i("Publisher: terminating");
         t.terminate();
       } else {
         Thread.sleep(pubIntervalMillis);
@@ -114,15 +113,15 @@ public class RingbufferFailoverSim {
         final ReadResultSet<byte[]> results = f.get(pollTimeoutMillis, TimeUnit.MILLISECONDS);
         nextSequence = results.getSequence(results.size() - 1) + 1;
         received += results.size();
-        log.info("Received {} records (total {}) next is {}", results.size(), received, nextSequence);
+        zlg.i("Received %,d records (total %,d) next is %,d", z -> z.arg(results::size).arg(received).arg(nextSequence));
       } catch (ExecutionException e) {
         e.printStackTrace();
       } catch (TimeoutException e) {
-        log.info("Timed out");
+        zlg.w("Timed out");
       }
       
       if (received % messages == 0 && received > 0) {
-        log.info("Subscriber: received one complete set");
+        zlg.i("Subscriber: received one complete set");
         if (terminateOnComplete) {
           t.terminate();
         }
@@ -165,14 +164,14 @@ public class RingbufferFailoverSim {
 
     final Supplier<HazelcastInstance> instanceSupplier = () -> GridHazelcastProvider.getInstance().createInstance(config);
 
-    log.info("Creating publisher instance...");
+    zlg.i("Creating publisher instance...");
     final AtomicReference<HazelcastInstance> instance = new AtomicReference<>(instanceSupplier.get());
     instance.get().getRingbuffer(BUFFER_NAME);
     
     final InstancePool instancePool = new InstancePool(2, instanceSupplier);
-    log.info("Prestarting subscriber instances...");
+    zlg.i("Prestarting subscriber instances...");
     instancePool.prestartAll();
-    log.info("Instances prestarted");
+    zlg.i("Instances prestarted");
     
     new RingbufferFailoverSim(messages) {{
       new TestSubscriber(instancePool::get, pollTimeoutMillis, false);
@@ -180,11 +179,11 @@ public class RingbufferFailoverSim {
       
       for (int i = 0; i < cycles; i++) {
         if (instance.get() == null) {
-          log.info("Creating publisher instance...");
+          zlg.i("Creating publisher instance...");
           instance.set(instanceSupplier.get());
         }
         
-        log.info("Publisher instance created");
+        zlg.i("Publisher instance created");
         final TestPublisher pub = new TestPublisher(instance::get, pubIntervalMillis, bytes);
         final TestSubscriber sub = new TestSubscriber(instance::get, pollTimeoutMillis, true);
         Joiner.of(pub, sub).joinSilently();

@@ -7,7 +7,6 @@ import java.util.*;
 
 import org.junit.*;
 import org.junit.runners.*;
-import org.slf4j.*;
 
 import com.hazelcast.config.*;
 import com.hazelcast.core.*;
@@ -16,6 +15,7 @@ import com.obsidiandynamics.func.*;
 import com.obsidiandynamics.hazelq.Receiver.*;
 import com.obsidiandynamics.worker.*;
 import com.obsidiandynamics.worker.Terminator;
+import com.obsidiandynamics.zerolog.*;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public abstract class AbstractPubSubTest {
@@ -106,8 +106,8 @@ public abstract class AbstractPubSubTest {
     doAnswer(invocation -> {
       final String summary = invocation.getArgument(0);
       final Throwable error = invocation.getArgument(1);
-      final Logger log = LoggerFactory.getLogger(AbstractPubSubTest.class);
-      log.warn(summary, error);
+      final Zlg zlg = Zlg.forDeclaringClass().get();
+      zlg.w(summary, error);
       return null;
     }).when(mock).onException(any(), any());
     return mock;
