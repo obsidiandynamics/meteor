@@ -9,8 +9,6 @@ import com.obsidiandynamics.worker.*;
 import com.obsidiandynamics.zerolog.*;
 
 public final class Election implements Terminable, Joinable {
-  private static final Zlg zlg = Zlg.forDeclaringClass().get();
-  
   private final ElectionConfig config;
   
   private final RetryableMap<String, byte[]> leases;
@@ -36,8 +34,8 @@ public final class Election implements Terminable, Joinable {
         .withExceptionClass(HazelcastException.class)
         .withAttempts(Integer.MAX_VALUE)
         .withBackoff(100)
-        .withFaultHandler(zlg::w)
-        .withErrorHandler(zlg::e);
+        .withFaultHandler(config.getZlg()::w)
+        .withErrorHandler(config.getZlg()::e);
     this.leases = new RetryableMap<>(retry, leases);
     registry = new Registry();
     
@@ -70,14 +68,14 @@ public final class Election implements Terminable, Joinable {
         final Lease existingLease = leaseView.getOrDefault(resource, Lease.vacant());
         if (! existingLease.isCurrent()) {
           if (existingLease.isVacant()) {
-            zlg.d("Lease of %s is vacant", z -> z.arg(resource)); 
+            config.getZlg().d("Lease of %s is vacant", z -> z.arg(resource)); 
           } else {
             scavengeWatcher.onExpire(resource, existingLease.getTenant());
-            zlg.d("Lease of %s by %s expired at %s", 
-                  z -> z
-                  .arg(resource)
-                  .arg(existingLease::getTenant)
-                  .arg(Args.map(existingLease::getExpiry, Lease::formatExpiry)));
+            config.getZlg().d("Lease of %s by %s expired at %s", 
+                              z -> z
+                              .arg(resource)
+                              .arg(existingLease::getTenant)
+                              .arg(Args.map(existingLease::getExpiry, Lease::formatExpiry)));
           }
           
           final UUID nextCandidate = registry.getRandomCandidate(resource);
@@ -92,14 +90,14 @@ public final class Election implements Terminable, Joinable {
             }
             
             if (success) {
-              zlg.d("New lease of %s by %s until %s", 
-                    z -> z
-                    .arg(resource)
-                    .arg(nextCandidate)
-                    .arg(Args.map(newLease::getExpiry, Lease::formatExpiry)));
+              config.getZlg().d("New lease of %s by %s until %s", 
+                                z -> z
+                                .arg(resource)
+                                .arg(nextCandidate)
+                                .arg(Args.map(newLease::getExpiry, Lease::formatExpiry)));
               reloadView();
               scavengeWatcher.onAssign(resource, nextCandidate);
-            }
+            } 
           }
         }
       }

@@ -1,14 +1,27 @@
 package com.obsidiandynamics.hazelq;
 
 import com.obsidiandynamics.yconf.*;
+import com.obsidiandynamics.zerolog.*;
 
 @Y
 public final class ElectionConfig {
+  @YInject
+  private Zlg zlg = Zlg.forDeclaringClass().get();
+  
   @YInject
   private int scavengeIntervalMillis = 100;
   
   @YInject
   private int leaseDurationMillis = 60_000;
+
+  Zlg getZlg() {
+    return zlg;
+  }
+
+  public ElectionConfig withZlg(Zlg zlg) {
+    this.zlg = zlg;
+    return this;
+  }
   
   int getScavengeInterval() {
     return scavengeIntervalMillis;

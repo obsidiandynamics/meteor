@@ -1,4 +1,4 @@
-HazelQ
+<img src="https://raw.githubusercontent.com/wiki/obsidiandynamics/hazelq/images/hazelq-logo.png" width="90px" alt="logo"/> HazelQ
 ===
 Message streaming over Hazelcast IMDG.
 
