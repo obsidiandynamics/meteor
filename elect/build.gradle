@@ -7,7 +7,6 @@ dependencies {
   
   testCompile project(":")
   testCompile project(":hazelq-assurance")
-  testCompile "nl.jqno.equalsverifier:equalsverifier:2.4.1"
 }
 
 jar {
