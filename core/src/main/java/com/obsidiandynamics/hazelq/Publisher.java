@@ -16,7 +16,7 @@ public interface Publisher extends Terminable {
     return futureCallback;
   }
   
-  static DefaultPublisher createDefault(HazelcastInstance instance, PublisherConfig config) {
+  static Publisher createDefault(HazelcastInstance instance, PublisherConfig config) {
     return new DefaultPublisher(instance, config);
   }
 }

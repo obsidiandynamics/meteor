@@ -25,7 +25,7 @@ public interface Subscriber extends Terminable {
     return new DefaultReceiver(this, recordHandler, pollTimeoutMillis);
   }
   
-  static DefaultSubscriber createDefault(HazelcastInstance instance, SubscriberConfig config) {
+  static Subscriber createDefault(HazelcastInstance instance, SubscriberConfig config) {
     return new DefaultSubscriber(instance, config);
   }
 }

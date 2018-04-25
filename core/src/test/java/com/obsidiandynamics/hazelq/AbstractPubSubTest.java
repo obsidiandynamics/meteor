@@ -76,7 +76,7 @@ public abstract class AbstractPubSubTest {
   }
   
   protected final DefaultPublisher configurePublisher(HazelcastInstance instance, PublisherConfig config) {
-    return register(Publisher.createDefault(instance, config), terminables);
+    return (DefaultPublisher) register(Publisher.createDefault(instance, config), terminables);
   }
   
   protected final DefaultSubscriber configureSubscriber(SubscriberConfig config) {
@@ -84,7 +84,7 @@ public abstract class AbstractPubSubTest {
   }
   
   protected final DefaultSubscriber configureSubscriber(HazelcastInstance instance, SubscriberConfig config) {
-    return register(Subscriber.createDefault(instance, config), terminables);
+    return (DefaultSubscriber) register(Subscriber.createDefault(instance, config), terminables);
   }
   
   protected final Receiver createReceiver(Subscriber subscriber, RecordHandler recordHandler, int pollTimeoutMillis) {

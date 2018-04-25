@@ -3,6 +3,7 @@ package com.obsidiandynamics.hazelq.sample;
 import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.obsidiandynamics.hazelq.*;
+import com.obsidiandynamics.hazelq.log.*;
 import com.obsidiandynamics.zerolog.*;
 
 public final class SyncPubSubSample {
@@ -11,11 +12,11 @@ public final class SyncPubSubSample {
     final Zlg zlg = Zlg.forDeclaringClass().get();
 
     // configure Hazelcast
-    final Config config = new Config().setProperty("hazelcast.logging.type", "slf4j");
-    final HazelcastInstance instance = GridProvider.getInstance().createInstance(config);
+    System.setProperty("hazelcast.logging.class", ZlgFactory.class.getName());
+    final HazelcastInstance instance = GridProvider.getInstance().createInstance(new Config());
 
     // the stream config is shared between all publishers and subscribers
-    final StreamConfig streamConfig = new StreamConfig().withName("TestStream");
+    final StreamConfig streamConfig = new StreamConfig().withName("test-stream");
 
     // create a publisher and send a message
     final Publisher publisher = Publisher.createDefault(instance,
@@ -28,7 +29,7 @@ public final class SyncPubSubSample {
     final Subscriber subscriber = Subscriber.createDefault(instance, 
                                                            new SubscriberConfig()
                                                            .withStreamConfig(streamConfig)
-                                                           .withGroup("TestGroup"));
+                                                           .withGroup("test-stream"));
     for (;;) {
       final RecordBatch records = subscriber.poll(100);
       zlg.i("Got %d record(s)", z -> z.arg(records::size));

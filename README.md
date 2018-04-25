@@ -235,6 +235,9 @@ testCompile "com.hazelcast:hazelcast:3.10-BETA-2"
 
 ## A pub-sub example
 
+```java
+
+```
 
 # Use cases
 ## Stream processing
