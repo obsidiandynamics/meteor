@@ -162,7 +162,7 @@ public class RingbufferFailoverSim {
                                                        .setEnabled(true)
                                                        .setFactoryClassName(NopRingbufferStore.Factory.class.getName())));
 
-    final Supplier<HazelcastInstance> instanceSupplier = () -> GridHazelcastProvider.getInstance().createInstance(config);
+    final Supplier<HazelcastInstance> instanceSupplier = () -> GridProvider.getInstance().createInstance(config);
 
     zlg.i("Creating publisher instance...");
     final AtomicReference<HazelcastInstance> instance = new AtomicReference<>(instanceSupplier.get());

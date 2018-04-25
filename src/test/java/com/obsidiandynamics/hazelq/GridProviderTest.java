@@ -10,12 +10,12 @@ import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.obsidiandynamics.yconf.*;
 
-public final class GridHazelcastProviderTest {
+public final class GridProviderTest {
   private HazelcastProvider provider;
   
   @Before
   public void before() {
-    provider = GridHazelcastProvider.getInstance();
+    provider = GridProvider.getInstance();
   }
   
   @After
@@ -38,12 +38,12 @@ public final class GridHazelcastProviderTest {
     config.setNetworkConfig(new NetworkConfig().setJoin(new JoinConfig()
                                                         .setMulticastConfig(multicastConfig)
                                                         .setTcpIpConfig(tcpIpConfig)));
-    final HazelcastInstance instance = GridHazelcastProvider.getInstance().createInstance(config);
+    final HazelcastInstance instance = GridProvider.getInstance().createInstance(config);
     assertNotNull(instance);
   }
   
   @Test
   public void testConfig() throws IOException {
-    assertNotNull(new MappingContext().withParser(__reader -> new Object()).fromString("").map(GridHazelcastProvider.class));
+    assertNotNull(new MappingContext().withParser(__reader -> new Object()).fromString("").map(GridProvider.class));
   }
 }

@@ -16,13 +16,14 @@ HazelQ showed lots of potential early in its journey, surpassing all expectation
 
 ## Fundamentals
 ### Streams, records and offsets
-A stream is a totally ordered sequence of records, and is fundamental to HazelQ. A record has an ID (64-bit integer) and a payload, which is an array of bytes. 'Totally ordered' means that, for any given publisher, records will be written in the order they were emitted. If record _P_ was published before _Q_, then _P_ will precede _Q_ in the stream. Furthermore, they will be read in the same order by all subscribers; _P_ will always be read before _Q_.
+A stream is a totally ordered sequence of records, and is fundamental to HazelQ. A record has an ID (64-bit integer) and a payload, which is an array of bytes. 'Totally ordered' means that, for any given publisher, records will be written in the order they were emitted. If record _P_ was published before _Q_, then _P_ will precede _Q_ in the stream. Furthermore, they will be read in the same order by all subscribers; _P_ will always be read before _Q_. (Depending on the context, we may sometimes use the term _message_ to refer to a record, as messaging is the dominant use case for HazelQ.)
 
 There is no recognised causal ordering _across_ publishers; if two (or more) publishers emit records simultaneously, those records may materialise in arbitrary order. However, this ordering will be observed consistently across all subscribers.
 
 The record offset uniquely identifies a record in the stream, and is used for O(1) lookups. The offset is a strictly monotonically increasing integer in a sparse address space, meaning that each successive offset is always higher than its predecessor and there may be varying gaps between successively assigned offsets. Your application shouldn't try to interpret the offset or guess what the next offset might be; it may, however, infer the relative order of any record pair based on their offsets, sort the records, and so forth.
 
 ```
+     start of stream
 +--------+-----------------+
 |0..00000|First message    |
 +--------+-----------------+
@@ -38,34 +39,114 @@ The record offset uniquely identifies a record in the stream, and is used for O(
 +--------+-----------------+
 |0..00010|Seventh message  |
 +--------+-----------------+
+            ...
++--------+-----------------+
+|0..56789|Last message     |
++--------+-----------------+
+       end of stream
 ```
 
 ### Publishers
-Publishers place records into the stream, for consumption by any number of subscribers. The pub/sub topology adheres to a multipoint-to-multipoint model, meaning that there may be any number of publishers and subscribers interacting with a stream. Often a single publisher is used with multiple subscribers.
+Publishers place records into the stream, for consumption by any number of subscribers. The pub-sub topology adheres to a multipoint-to-multipoint model, meaning that there may be any number of publishers and subscribers interacting with a stream. Often a single publisher is used with multiple subscribers.
 
 ### Subscribers
 A subscriber is a stateful entity that reads a message from a stream, one at a time. **The act of reading a message does not consume it.** In fact, subscribers have absolutely no impact on the stream. This is the main point of distinction between a message stream and a traditional message queue (MQ).
 
 A subscriber internally maintains an offset that points to the next message in the stream, advancing the offset for every successive read. When a subscriber first attaches to a stream, it may elect to start at the head-end or the tail-end of the stream, or seek to a particular offset.
 
-Subscribers retain their offset state locally. Because subscribers do not interfere, there may be any number of subscribers reading the same stream, each with their own position in the stream. Subscribers may operate at any rate; a slow/backlogged subscriber has no negative effect on its peers.
+Subscribers retain their offset state locally. Since subscribers do not interfere, there may be any number of them reading the same stream, each with their own position in the stream. Subscribers run at their own pace; a slow/backlogged subscriber has no impact on its peers.
+
+```
++--------+
+|0..00000|
++--------+
+|0..00001| <= subscriber 2
++--------+
+|0..00002|
++--------+
+|0..00003| <= subscriber 1
++--------+
+   ...
++--------+
+|0..00008| <= subscriber 3
++--------+
+|0..00042|
++--------+
+   ...
+```
 
 ### Subscriber groups
-Subscribers may be optionally associated with a group, which provides exclusivity of stream reading, as well as offset tracking. For a set of subscribers sharing a common group, at most one subscriber is allowed to read from the stream. The assignment of a subscriber to a stream is random, biased towards first-come-first-serve. Only the assigned subscriber may read from the stream; other subscribers will 'circle' the stream in a holding pattern. 
+Subscribers may be optionally associated with a group, which provides exclusivity of stream reading, as well as offset tracking. For a set of subscribers sharing a common group, at most one subscriber is allowed to read from the stream. The assignment of a subscriber to a stream is random, biased towards first-come-first-serve. Only the assigned subscriber may read from the stream; other subscribers will hold off from reading the stream.
 
-By routinely reading a message from a stream, the subscriber implicitly indicates that it is healthy, thereby maintaining its assignment indefinitely. However, should the subscriber fail to read again within the allowable deadline, it will be deemed as faulty and the stream will be reassigned to an alternate subscriber in the same group.
+By routinely reading a record from a stream, the subscriber implicitly indicates that it is healthy, thereby maintaining its assignment indefinitely. However, should the subscriber fail to read again within the allowable deadline, it will be deemed as faulty and the stream will be reassigned to an alternate subscriber in the same group.
 
-A grouped subscriber can write its last-read offset back to the grid, recording it in a dedicated metadata area. This is called _confirming_ an offset. A confirmed offset implies that the record at that offset **and all prior records** have been dealt with by the group. A word of caution: an offset should only be confirmed when your application is done with the message in question and all messages before it.
+A grouped subscriber also tracks its current read offset locally. It also writes its last checkpoint offset back to the grid, recording it in a dedicated metadata area. This is called _confirming_ an offset. A confirmed offset implies that the record at that offset **and all prior records** have been dealt with by the subscriber. A word of caution: an offset should only be confirmed when your application is done with the record in question and all records before it. By 'dealt with' we mean the record has been processed to the point that any actions that would have resulted from the record have been carried out. This may include calling other APIs, updating a database, persisting the record's payload, or publishing more records.
 
-If an ungrouped subscriber is closed and reopened, it will lose its offset. It is up to the application to appropriately reset the free subscribers.
+```
++--------+
+|0..00000|
++--------+
+|0..00001| <= confirmed offset (stable; stored as stream metadata on the grid)
++--------+
+|0..00002|
++--------+
+|0..00003| <= read offset (volatile; stored locally in the subscriber)
++--------+
+   ...
++--------+
+|0..00008|
++--------+
+|0..00042|
++--------+
+   ...
+```
 
-### At-least-once delivery
+**Note:** Contrary to a subscriber group, if an ungrouped subscriber is closed and reopened, it will lose its offset. It is up to the application to appropriately reset those subscribers.
 
-### Stream capacity, replication and persistence
-HazelQ stores the records in a distributed ring buffer.
+The relationship between publishers, streams and subscribers is depicted below.
+
+```
++-----------+         +-----------+
+|PUBLISHER 1|         |PUBLISHER 2|
++-----+-----+         +-----+-----+
+      |                     |
+      |                     |
+      |                     |
+      |                     |
+      |                     |
+ +----v---------------------v-----------------------------------------+
+ |                            >>> STREAM >>>                          |
+ | +----------------------------------------------------------------+ |
+ | |record 0..00|record 0..01|record 0..02|record 0..03|record 0..04| |
+ | +----------------------------------------------------------------+ |
+ |                            >>> STREAM >>>                          |
+ +------------+--------------------+-------------------+--------------+
+              |                    |                   |
+              |                    |                   X  (no feed to subscriber 3)
+              |                    |
+              |            +-------|----------------------------+
+              |            |       |                            |
+       +------v-----+      | +-----v------+      +------------+ |
+       |SUBSCRIBER 1|      | |SUBSCRIBER 2|      |SUBSCRIBER 3| |
+       +------------+      | +------------+      +------------+ |
+                           |           SUBSCRIBER GROUP         |
+                           +------------------------------------+
+```
+
+### At-least-once delivery and exactly-once processing
+HazelQ takes a prudent approach to data integrity — providing at-least-once message delivery guarantees. If a subscriber within a group is unable to completely process a message (for example, if it crashes midstream), the last message along with any other unconfirmed messages will be redelivered to another subscriber within the same group. This is why it's so important for a subscriber to only confirm an offset when it has completely dealt with the message, not before.
+
+At-least-once semantics do carry a caveat: under some circumstances it may be possible for your application to read the same message repeatedly, even if it had already dealt with the message. For example, you may have dealt with the message but crashed just before confirming it. When a new subscriber takes over the stream, it will replay messages from the last confirmed checkpoint. Alternatively, a message may have been confirmed and another subscriber in the group took over the stream, but due to the asynchronous nature of confirmations the new subscriber will replay from the point of the last received confirmation.
+
+**Subscribers in message streaming applications must be idempotent.** In other words, processing the same record repeatedly should have no net effect on the subscriber ecosystem. If a record has no _additive_ effects, the subscriber is inherently idempotent. (For example, if the subscriber simply overwrites an existing database entry with a new one, then the update is idempotent.) Otherwise, the subscriber must check whether a record has already been processed, and to what extent, prior to processing a record. _The combination of at-least-once delivery and subscriber idempotence leads to exactly-once semantics._
+
+### Stream capacity
+HazelQ stores the records in a distributed ring buffer within the IMDG — each stream corresponds to one Hazelcast ring buffer. The ring buffer has a configurable, albeit a finite capacity; when the capacity is exhausted, the oldest records will be overwritten. The subscriber API doesn't expose the ring topology; you just see an ordered list of records that gets truncated from the tail end when the buffer is at capacity. The default stream capacity is 10,000 records; this can be overridden via the `StreamConfig` class.
+
+HazelQ lets you access historical records beyond the buffer's capacity by providing a custom `RingbufferStore` implementation via `StreamConfig`.
 
 ## Architecture
-To get HazelQ, you need to first understand [Hazelcast and the basics of In-Memory Data Grids](https://hazelcast.com/use-cases/imdg/). In short, an IMDG pools the memory heap of multiple processes across different machines, creating the illusion of a massive computer comprising lots of cooperating processes, with the combined computational (RAM & CPU) resources. An IMDG is inherently elastic; processes are free to join and leave the grid at any time. The underlying data is sharded for performance and replicated across multiple processes for availability, and can be optionally persisted for durability.
+To fully get your head around the design of HazelQ, you need to first understand [Hazelcast and the basics of In-Memory Data Grids](https://hazelcast.com/use-cases/imdg/). In short, an IMDG pools the memory heap of multiple processes across different machines, creating the illusion of a massive computer comprising lots of cooperating processes, with the combined computational (RAM & CPU) resources. An IMDG is inherently elastic; processes are free to join and leave the grid at any time. The underlying data is sharded for performance and replicated across multiple processes for availability, and can be optionally persisted for durability.
 
 The schematic below outlines the key architectural concepts. 
 
@@ -80,7 +161,7 @@ The schematic below outlines the key architectural concepts.
 +----+---------------+----+---------------+----+---------------+----+---------------+----+
      |               |    |               |    |               |    |               |
      |  Application  |    |  Application  |    |  Application  |    |  Application  |
-     |   (pub/sub)   |    |   (pub/sub)   |    |   (pub/sub)   |    |   (pub/sub)   |
+     |   (pub-sub)   |    |   (pub-sub)   |    |   (pub-sub)   |    |   (pub-sub)   |
      +---------------+    +---------------+    +---------------+    +---------------+
 ```
 
@@ -95,10 +176,9 @@ The relationship between your application code, HazelQ and Hazelcast is depicted
 
 ```
 +------------------------------------------------------------------------------+                                     
-|                              Pub/Sub Application                             | <= application layer
+|                              pub-sub Application                             | <= application layer
 +------------------------------------------------------------------------------+ 
-                                     ||||||
-                                     VVVVVV
+                                       V
 +------------------------------------------------------------------------------+
 |   PUBLISHER API   |   SUBSCRIBER API   |   OBJECT MODEL   |  CONFIGURATION   | <= client layer
 +------------------------------------------------------------------------------+
@@ -106,8 +186,7 @@ The relationship between your application code, HazelQ and Hazelcast is depicted
 | Election | Offset     | Group      | Health     | Marshalling  | Data        | <= protocol layer
 |          | Tracking   | Balancing  | Monitoring | & Versioning | Compression |
 +------------------------------------------------------------------------------+
-                                     ||||||
-                                     VVVVVV
+                                       V
 +------------------------------------------------------------------------------+                                     
 |                                 Hazelcast IMDG                               | <= data grid
 +------------------------------------------------------------------------------+ 
@@ -115,25 +194,61 @@ The relationship between your application code, HazelQ and Hazelcast is depicted
 
 **Note:** Some of the capabilities described above exist only in design and are yet to be implemented. The outstanding capabilities are: record versioning, batching and compression. These should be implemented by the time HazelQ reaches its 1.0.0 release milestone.
 
-## Persistence
+### Replicas
+A stream is mapped to a single ring buffer by the protocol layer, which will be mastered by a single process node within Hazelcast. The ring buffer's master is responsible for marshalling all writes to the buffer and serving the read queries. The master will also optionally replicate writes to replicas, if these are configured in your `StreamConfig`. There are two types of replicas: **sync replicas** and **async replicas**. 
+
+Sync replicas will be written to before the publish operation is acknowledged, and before any subscribers are allowed to see the published record. Sync replicas facilitate data redundancy but increase the latency of publishing to a stream. Sync replicas are fed in parallel; the publishing time is the ceiling of all individual replication times.
+
+Async replicas are fed in the background, providing additional redundancy without the expense of blocking.
+
+A production environment should be configured with at least one sync replica, ideally two sync replicas if possible. The default stream configuration is set to one sync replica and zero async replicas.
+
+### Durability
+In traditional client-server architectures (such as Kafka and Kinesis) the concepts of _availability_ and _durability_ are typically combined. A replica will be statically affiliated with a set of shards and will persist data locally, in stable storage, and will make that data available either for read queries or in the event of a master fail-over. It is typically infeasible to move (potentially terabytes of) data from one replica to another.
+
+By contrast, in an IMDG-based architecture, replicas are dynamic processes that join and leave the grid sporadically, and store a limited amount of data in memory. Replicas use consistent hashing in order to balance the shards across the cluster, providing both scalability and availability.
+
+Further assigning storage responsibilities to replicas is intractable in the dynamic ecosystem of an IMDG. Even with consistent hashing, the amount of data migration would be prohibitive. As such, durability in an IMDG is orthogonal concern; the shard master will delegate to a centralised storage repository for writing and reading long-term data that may no longer be available in grid memory.
+
+In its present form, HazelQ relies on Hazelcast's `RingbufferStore` to provide unbounded data persistence. This lets you plug in a standard database or a disk-backed cache (such as Redis) into HazelQ. Subscribers will be able to read historical data from a stream, beyond what is accommodated by the underlying ring buffer's capacity. In future iterations, the plan for HazelQ is to offer a turnkey orthogonal persistence engine that is optimised for storing large volumes of log-structured data.
 
 # Getting Started
+## Dependencies
+Gradle builds are hosted on JCenter. Add the following snippet to your build file, replacing `x.y.z` with the version shown on the Download badge at the top of this README.
+
+```groovy
+compile "com.obsidiandynamics.hazelq:hazelq-core:x.y.z"
+compile "com.hazelcast:hazelcast:3.10-BETA-2"
+```
+
+**Note:** Although HazelQ is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with HazelQ. This allows you to use any 3.x API-compatible HazelQ client library in your application without being constrained by transitive dependencies.
+
+HazelQ is packaged as two separate modules:
+
+1. `hazelq-core` — The HazelQ implementation. This is the only module you need in production.
+2. `hazelq-assurance` — Mocking components and test utilities. Normally, this module would only be used during testing and should be declared in the `testCompile` configuration. See below.
+
+```groovy
+testCompile "com.obsidiandynamics.hazelq:hazelq-assurance:x.y.z"
+testCompile "com.hazelcast:hazelcast:3.10-BETA-2"
+```
+
+## A pub-sub example
+
 
 # Use cases
-## Distributed ledger
-
 ## Stream processing
 
-## Pub/sub topics
+## Pub-sub topics
 
 ## Message queue
 
 # Roadmap
 * Lanes within streams: **HIGH PRIORITY**
   - Currently the biggest limitation of HazelQ, particularly when comparing to Kafka and Kinesis.
+  - Currently there's no notion of parallelism within a stream. Under the current model, messages would have to be mapped to multiple streams and there's no (and should never be) load balancing _across_ streams, as streams are meant to be completely unrelated.
   - Need a set of totally ordered message sequences that roll into a single partially ordered stream.
   - Enables parallel stream processing use cases with multi-subscriber load balancing. Paves the way for a fully-fledged message streaming platform.
-  - Currently there's no notion of parallelism. Under the current model, messages would have to be mapped to multiple streams and there's no (and should never be) load balancing _across_ streams, as streams are meant to be completely unrelated.
 * Record versioning and backward compatibility with rolling upgrades: **HIGH PRIORITY**
   - Any changes to the record structure will break older clients when doing a rolling update. This means that the only way of upgrading a grid is to either bring it offline, or to terminate subscribers (which requires bespoke code on the application end).
   - Add a version field to the head of a batch. A publisher always writes to the ring buffer in the latest (from its perspective) version.
@@ -157,11 +272,11 @@ The relationship between your application code, HazelQ and Hazelcast is depicted
 * Pipelining of client Hazelcast API calls separately from message (de)serialization (using separate threads for I/O and serialization):
   - Approach is similar to how [Jackdaw](https://github.com/obsidiandynamics/jackdaw) pipelines Kafka I/O and serialization; only the pipelines will be integrated into the HazelQ client API (because we can) and thus made completely transparent to the application.
 * JMX metrics
-* Auto-confirm of subscriber offsets. Currently this is a manual call to `Subscriber.confirm()`.
+* Auto-confirming of subscriber offsets. Currently this is a manual call to `Subscriber.confirm()`.
 * Metadata server:
   - Currently all publisher and subscribers to a stream must agree on all of the stream's parameters — capacity, number of sync/async, replicas, storage implementation, etc. There is no way to discover this information. The present design, however restrictive, ensures that _any_ cohort can auto-create the stream if one doesn't exist. (In other words, streams are always created lazily, upon first use.) In practice, this is acceptable for long-lived streams and where the stream configuration is static and can be agreed upon and disseminated out-of-band.
   - Ideally, publishers and subscribers should refer to stream solely by its name, without concerning themselves with its underlying configuration. Create a stream metedata service that holds a serialized `StreamConfig` (e.g. JSON with YConf mappings) for a given stream name. (A distributed hash map should do.) 
-  - The act of looking up the stream's metadata should be separate from the act of connecting to the stream for pub/sub. The lookup operation is done via a separate `MetadataService` API and may take an optional `Supplier<StreamConfig>`, in case the stream doesn't exist.
+  - The act of looking up the stream's metadata should be separate from the act of connecting to the stream for pub-sub. The lookup operation is done via a separate `MetadataService` API and may take an optional `Supplier<StreamConfig>`, in case the stream doesn't exist.
   - There would ideally be one application responsible for 'mastering' the stream; that application would house the stream config and pass it as the default value. Typically, that application would be one of the publishers. Other applications would perform the lookup without knowledge of the default value; if metadata is missing then the application would either back off or fail (or more pragmatically, fail after some number of back-offs). Perhaps the lookup API could take a timeout value, backing off and retrying behind the scenes.
   - Being a distributed hash map, the metadata map might itself be created lazily. For this reason, _all_ cohorts must agree on the metadata map configuration. Sensible defaults should be provided by HazelQ, with the option to override.
   - Metadata persistence: this wouldn't be an issue for transient (non-persisted topics); however, persisted topics might survive their own metadata if the grid is reformed. The only problem is that there isn't a sensible default persistence configuration for the metadata hash map. The options are to either agree on a global configuration which is dispersed out-of-band, or to apply the `Supplier<MetadataConfig>` pattern and make one 'pilot' process responsible for metadata 'bootstrapping'. If all metadata replicas are lost, the other procs would have to wait for the pilot proc to join the grid. The same pilot proc could also be used to 'master' the streams — acting as a central repository of configuration, which it immediately transfers to the grid. For as long as the grid is intact, the pilot proc is dormant.
@@ -175,4 +290,4 @@ The relationship between your application code, HazelQ and Hazelcast is depicted
 * Background (semi-)compaction:
   - Persisted messages are obsoleted in the background based on key, and are thereby excluded from the batch, leaving a hole which may in theory be squashed (as long as the intra-batch message numbering is preserved). If the last message in a batch is obsoleted, then the batch is fed as a special _void batch_ to the subscriber, with a pointer to the next non-void batch. This way, if there is a large void in the message log (several contiguous void batches), the subscriber can rapidly skip over those ring buffer cells.
   - This might be called semi-compaction as it works at a batch level; it doesn't shuffle messages between batches or try to splice buddying batches to avoid external fragmentation. The algorithm reaches peak efficiency when entire batches can be reclaimed and the subscribers can begin to fast-forward their offsets, skipping over the ring buffer cells. Even if there are still lots of old non-void batches left due to sparsely distributed relevant/un-compacted messages, we can still realise performance gains by allowing subscribers to silently skip over the compacted messages.
-  - We're ultimately limited by the ring buffer structure which isn't naturally prone to compaction (as opposed to chained log nodes, which can easily be buddied and spliced). Effectively, we are trying to reduce a ring buffer to a skip list.
+  - We're ultimately limited by a ring buffer's rigid structure which isn't naturally prone to compaction (as opposed to chained log nodes, which can easily be buddied and spliced). At best, we can reduce a ring buffer to a skip list.

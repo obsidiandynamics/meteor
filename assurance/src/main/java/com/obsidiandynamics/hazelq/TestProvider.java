@@ -4,14 +4,14 @@ import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.hazelcast.test.*;
 
-public final class TestHazelcastProvider implements HazelcastProvider {
+public final class TestProvider implements HazelcastProvider {
   private final TestHazelcastInstanceFactory factory;
   
-  public TestHazelcastProvider() {
+  public TestProvider() {
     this(new TestHazelcastInstanceFactory());
   }
   
-  public TestHazelcastProvider(TestHazelcastInstanceFactory factory) {
+  public TestProvider(TestHazelcastInstanceFactory factory) {
     this.factory = factory;
   }
   

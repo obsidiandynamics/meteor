@@ -34,7 +34,7 @@ public final class ElectionTest {
   
   @Before
   public void before() {
-    defaultProvider = new TestHazelcastProvider();
+    defaultProvider = new TestProvider();
   }
   
   @After

@@ -4,21 +4,21 @@ import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.obsidiandynamics.yconf.*;
 
-@Y(GridHazelcastProvider.Mapper.class)
-public final class GridHazelcastProvider implements HazelcastProvider {
+@Y(GridProvider.Mapper.class)
+public final class GridProvider implements HazelcastProvider {
   public static final class Mapper implements TypeMapper {
     @Override public Object map(YObject y, Class<?> type) {
       return instance;
     }
   }
   
-  private static final GridHazelcastProvider instance = new GridHazelcastProvider();
+  private static final GridProvider instance = new GridProvider();
   
-  public static GridHazelcastProvider getInstance() {
+  public static GridProvider getInstance() {
     return instance;
   }
   
-  private GridHazelcastProvider() {}
+  private GridProvider() {}
   
   @Override
   public HazelcastInstance createInstance(Config config) {

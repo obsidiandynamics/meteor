@@ -11,7 +11,7 @@ public final class HazelcastSample {
         .setProperty("hazelcast.logging.type", "slf4j")
         .setProperty("hazelcast.max.no.heartbeat.seconds", String.valueOf(10));
     
-    final HazelcastProvider provider = GridHazelcastProvider.getInstance();
+    final HazelcastProvider provider = GridProvider.getInstance();
     final HazelcastInstance h0 = provider.createInstance(config);
     final HazelcastInstance h1 = provider.createInstance(config);
     useInstance(h0);

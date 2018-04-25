@@ -109,7 +109,7 @@ public class RingbufferBandwidthSim {
                              .setBackupCount(0)
                              .setAsyncBackupCount(0));
 
-    final InstancePool instancePool = new InstancePool(3, () -> GridHazelcastProvider.getInstance().createInstance(config));
+    final InstancePool instancePool = new InstancePool(3, () -> GridProvider.getInstance().createInstance(config));
     zlg.i("Prestarting instances...");
     instancePool.prestartAll();
     zlg.i("Instances prestarted");

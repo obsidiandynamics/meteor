@@ -41,7 +41,7 @@ public abstract class AbstractPubSubTest {
       auxLoadThreads.add(WorkerThread.builder().onCycle(t -> {}).buildAndStart());
     }
     
-    defaultProvider = new TestHazelcastProvider();
+    defaultProvider = new TestProvider();
   }
   
   @After
@@ -58,7 +58,7 @@ public abstract class AbstractPubSubTest {
   }
   
   protected final HazelcastInstance newGridInstance() {
-    return newInstance(GridHazelcastProvider.getInstance());
+    return newInstance(GridProvider.getInstance());
   }
   
   protected final HazelcastInstance newInstance() {
