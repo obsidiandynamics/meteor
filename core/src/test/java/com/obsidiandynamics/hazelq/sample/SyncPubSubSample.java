@@ -3,16 +3,15 @@ package com.obsidiandynamics.hazelq.sample;
 import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.obsidiandynamics.hazelq.*;
-import com.obsidiandynamics.hazelq.log.*;
 import com.obsidiandynamics.zerolog.*;
 
 public final class SyncPubSubSample {
   public static void main(String[] args) throws InterruptedException {
-    // set up a Zerolog logger
+    // set up a Zerolog logger and bridge from Hazelcast's internal logger
     final Zlg zlg = Zlg.forDeclaringClass().get();
+    HazelcastZlgBridge.install();
 
     // configure Hazelcast
-    System.setProperty("hazelcast.logging.class", ZlgFactory.class.getName());
     final HazelcastProvider provider = GridProvider.getInstance();
     final HazelcastInstance instance = provider.createInstance(new Config());
 

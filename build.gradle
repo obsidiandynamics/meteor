@@ -135,6 +135,7 @@ dependencies {
   compile "com.obsidiandynamics.fulcrum:fulcrum-worker:${fulcrumVersion}"
   compile "com.obsidiandynamics.yconf:yconf-core:${yconfVersion}"
   compile "com.obsidiandynamics.zerolog:zerolog-core:${zerologVersion}"
+  compile "com.obsidiandynamics.zerolog:zerolog-bridge-hazelcast:${zerologVersion}"
   
   testRuntime "com.obsidiandynamics.fulcrum:fulcrum-launcher:${fulcrumVersion}"
 }

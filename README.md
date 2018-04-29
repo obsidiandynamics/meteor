@@ -145,7 +145,113 @@ HazelQ stores the records in a distributed ring buffer within the IMDG — each 
 
 HazelQ lets you access historical records beyond the buffer's capacity by providing a custom `RingbufferStore` implementation via `StreamConfig`.
 
-## Architecture
+# Getting Started
+## Dependencies
+Gradle builds are hosted on JCenter. Add the following snippet to your build file, replacing `x.y.z` with the version shown on the Download badge at the top of this README.
+
+```groovy
+compile "com.obsidiandynamics.hazelq:hazelq-core:x.y.z"
+compile "com.hazelcast:hazelcast:3.10-BETA-2"
+```
+
+**Note:** Although HazelQ is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with HazelQ. This lets you to use any 3.x API-compatible HazelQ client library in your application without being constrained by transitive dependencies.
+
+HazelQ is packaged as two separate modules:
+
+1. `hazelq-core` — The HazelQ implementation. This is the only module you need in production.
+2. `hazelq-assurance` — Mocking components and test utilities. Normally, this module would only be used during testing and should be declared in the `testCompile` configuration. See below.
+
+```groovy
+testCompile "com.obsidiandynamics.hazelq:hazelq-assurance:x.y.z"
+testCompile "com.hazelcast:hazelcast:3.10-BETA-2"
+```
+
+## A pub-sub example
+The following snippet publishes a message and consumes it from a polling loop.
+
+```java
+// set up a Zerolog logger and bridge from Hazelcast's internal logger
+final Zlg zlg = Zlg.forDeclaringClass().get();
+HazelcastZlgBridge.install();
+
+// configure Hazelcast
+final HazelcastProvider provider = GridProvider.getInstance();
+final HazelcastInstance instance = provider.createInstance(new Config());
+
+// the stream config is shared between all publishers and subscribers
+final StreamConfig streamConfig = new StreamConfig().withName("test-stream");
+
+// create a publisher and send a message
+final Publisher publisher = Publisher.createDefault(instance,
+                                                    new PublisherConfig()
+                                                    .withStreamConfig(streamConfig));
+
+publisher.publishAsync(new Record("Hello world".getBytes()));
+
+// create a subscriber for a test group and poll for records
+final Subscriber subscriber = Subscriber.createDefault(instance, 
+                                                       new SubscriberConfig()
+                                                       .withStreamConfig(streamConfig)
+                                                       .withGroup("test-group"));
+// 10 polls, at 100 ms each
+for (int i = 0; i < 10; i++) {
+  zlg.i("Polling...");
+  final RecordBatch records = subscriber.poll(100);
+  
+  if (! records.isEmpty()) {
+    zlg.i("Got %d record(s)", z -> z.arg(records::size));
+    records.forEach(r -> zlg.i(new String(r.getData())));
+    subscriber.confirm();
+  }
+}
+
+// clean up
+publisher.terminate().joinSilently();
+subscriber.terminate().joinSilently();
+instance.shutdown();
+```
+
+Some things to note:
+
+* If your application is already using Hazelcast, you should recycle the same `HazelcastInstance` for HazelQ as you use elsewhere in your process. (Unless you wish to bulkhead the two for whatever reason.) Otherwise, you can create a new instance as in the above example.
+* The `publishAsync()` method is non-blocking, returning a `CompletableFuture` that is assigned the record's offset. Alternatively, you can call an overloaded version, providing a `PublishCallback` to be notified when the record was actually sent, or if an error occurred. Most things in HazelQ are done asynchronously.
+* The `StreamConfig` objects must be identical among all publishers and subscribers. The stream capacity, number of sync/async replicas, persistence configuration and so forth, must be agreed upon in advance by all parties.
+* Calling `withGroup()` on the `SubscriberConfig` assigns a subscriber group, meaning that only one subscriber will be allowed to pull messages off the stream (others will hold back). It also means that the subscriber can persist its offset on the grid by calling `confirm()`, allowing other subscribers to take over from the point of failure. This has the effect of advancing the group's read offset to the last offset successfully read by the active subscriber. Alternatively, a subscriber can call `confirm(long)`, passing in a specific offset.  
+* Polling with `Subscriber.poll()` returns a (possibly empty) batch of records. The timeout is in milliseconds (consistently throughout HazelQ) and sets the upper bound on the blocking time. If there are accumulated records in the buffer prior to calling `poll()`, then the latter will return without further blocking.
+* Clean up the publisher and subscriber instances by calling `terminate().joinSilently()`. This both instructs the it to stop and subsequently awaits its termination.
+
+## Logging
+We use [Zerolog](https://github.com/obsidiandynamics/zerolog) (Zlg) within HazelQ and also in our examples for low-overhead logging. While it's completely optional, Zlg works well with SLF4J and is optimised for performance-intensive applications. An additional advantage of bridging to Zlg is that it preserves call site (class/method/line) location information for all logs that come out of Hazelcast. (By default, Hazelcast loses location information when binding to SLF4J; using Zlg eliminates this problem.)
+
+To bind Zlg to SLF4J, add the following to your `build.gradle` in the `dependencies` section, along with your other SL4J and concrete logger dependencies. 
+
+```groovy
+runtime "com.obsidiandynamics.zerolog:zerolog-slf4j17:0.14.0"
+```
+
+Replace the version in the snippet with the version on the Zlg download badge.
+
+[![Download](https://api.bintray.com/packages/obsidiandynamics/zerolog/zerolog-core/images/download.svg) ](https://bintray.com/obsidiandynamics/zerolog/zerolog-core/_latestVersion)
+
+## Working with byte arrays
+We want to keep to a light feature set until the project matures to a production-grade system. For the time being, there is no concept of object (de)serialization built into HazelQ; instead records deal directly with byte arrays. While it means you have to push your own bytes around, it gives you the most flexibility with the choice of serialization frameworks. In practice, all serializers convert between objects and either character or byte streams, so plugging in a serializer is a trivial matter.
+
+Future iterations will include a mechanism for serializing objects and, crucially, _pipelining_ — where (de)serialization is performed in a different thread to the rest of the application, thereby capitalising on multi-core CPUs.
+
+## Switching providers
+`HazelcastProvider` is an abstract factory for obtaining `HazelcastInstance` objects with varying behaviour. Its use is completely optional — if you are already accustomed to using a `HazelcastInstanceFactory`, you may continue to do so. The real advantage is that it allows for dependency inversion — decoupling your application from the physical grid. Presently, there are two implementations:
+
+* `GridProvider` is a factory for `HazelcastInstance` instances that connect to a real grid. The instances produced are the same as those made by `HazelcastInstanceFactory`.
+* `TestProvider` is a factory for connecting to a virtual 'test' grid; one which is simulated internally and doesn't leave the confines of the JVM. `TestProvider` requires the `hazelq-assurance` module on the classpath.
+
+# Use cases
+## Stream processing
+
+## Pub-sub topics
+
+## Message queue
+
+# Architecture
 To fully get your head around the design of HazelQ, you need to first understand [Hazelcast and the basics of In-Memory Data Grids](https://hazelcast.com/use-cases/imdg/). In short, an IMDG pools the memory heap of multiple processes across different machines, creating the illusion of a massive computer comprising lots of cooperating processes, with the combined computational (RAM & CPU) resources. An IMDG is inherently elastic; processes are free to join and leave the grid at any time. The underlying data is sharded for performance and replicated across multiple processes for availability, and can be optionally persisted for durability.
 
 The schematic below outlines the key architectural concepts. 
@@ -194,7 +300,7 @@ The relationship between your application code, HazelQ and Hazelcast is depicted
 
 **Note:** Some of the capabilities described above exist only in design and are yet to be implemented. The outstanding capabilities are: record versioning, batching and compression. These should be implemented by the time HazelQ reaches its 1.0.0 release milestone.
 
-### Replicas
+## Replicas
 A stream is mapped to a single ring buffer by the protocol layer, which will be mastered by a single process node within Hazelcast. The ring buffer's master is responsible for marshalling all writes to the buffer and serving the read queries. The master will also optionally replicate writes to replicas, if these are configured in your `StreamConfig`. There are two types of replicas: **sync replicas** and **async replicas**. 
 
 Sync replicas will be written to before the publish operation is acknowledged, and before any subscribers are allowed to see the published record. Sync replicas facilitate data redundancy but increase the latency of publishing to a stream. Sync replicas are fed in parallel; the publishing time is the ceiling of all individual replication times.
@@ -203,7 +309,7 @@ Async replicas are fed in the background, providing additional redundancy withou
 
 A production environment should be configured with at least one sync replica, ideally two sync replicas if possible. The default stream configuration is set to one sync replica and zero async replicas.
 
-### Durability
+## Durability
 In traditional client-server architectures (such as Kafka and Kinesis) the concepts of _availability_ and _durability_ are typically combined. A replica will be statically affiliated with a set of shards and will persist data locally, in stable storage, and will make that data available either for read queries or in the event of a master fail-over. It is typically infeasible to move (potentially terabytes of) data from one replica to another.
 
 By contrast, in an IMDG-based architecture, replicas are dynamic processes that join and leave the grid sporadically, and store a limited amount of data in memory. Replicas use consistent hashing in order to balance the shards across the cluster, providing both scalability and availability.
@@ -211,101 +317,6 @@ By contrast, in an IMDG-based architecture, replicas are dynamic processes that 
 Further assigning storage responsibilities to replicas is intractable in the dynamic ecosystem of an IMDG. Even with consistent hashing, the amount of data migration would be prohibitive. As such, durability in an IMDG is orthogonal concern; the shard master will delegate to a centralised storage repository for writing and reading long-term data that may no longer be available in grid memory.
 
 In its present form, HazelQ relies on Hazelcast's `RingbufferStore` to provide unbounded data persistence. This lets you plug in a standard database or a disk-backed cache (such as Redis) into HazelQ. Subscribers will be able to read historical data from a stream, beyond what is accommodated by the underlying ring buffer's capacity. In future iterations, the plan for HazelQ is to offer a turnkey orthogonal persistence engine that is optimised for storing large volumes of log-structured data.
-
-# Getting Started
-## Dependencies
-Gradle builds are hosted on JCenter. Add the following snippet to your build file, replacing `x.y.z` with the version shown on the Download badge at the top of this README.
-
-```groovy
-compile "com.obsidiandynamics.hazelq:hazelq-core:x.y.z"
-compile "com.hazelcast:hazelcast:3.10-BETA-2"
-```
-
-**Note:** Although HazelQ is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with HazelQ. This lets you to use any 3.x API-compatible HazelQ client library in your application without being constrained by transitive dependencies.
-
-HazelQ is packaged as two separate modules:
-
-1. `hazelq-core` — The HazelQ implementation. This is the only module you need in production.
-2. `hazelq-assurance` — Mocking components and test utilities. Normally, this module would only be used during testing and should be declared in the `testCompile` configuration. See below.
-
-```groovy
-testCompile "com.obsidiandynamics.hazelq:hazelq-assurance:x.y.z"
-testCompile "com.hazelcast:hazelcast:3.10-BETA-2"
-```
-
-## A pub-sub example
-The following snippet publishes a message and consumes it from a polling loop.
-
-```java
-// set up a Zerolog logger
-final Zlg zlg = Zlg.forDeclaringClass().get();
-
-// configure Hazelcast
-System.setProperty("hazelcast.logging.class", ZlgFactory.class.getName());
-final HazelcastProvider provider = GridProvider.getInstance();
-final HazelcastInstance instance = provider.createInstance(new Config());
-
-// the stream config is shared between all publishers and subscribers
-final StreamConfig streamConfig = new StreamConfig().withName("test-stream");
-
-// create a publisher and send a message
-final Publisher publisher = Publisher.createDefault(instance,
-                                                    new PublisherConfig()
-                                                    .withStreamConfig(streamConfig));
-
-publisher.publishAsync(new Record("Hello world".getBytes()));
-
-// create a subscriber for a test group and poll for records
-final Subscriber subscriber = Subscriber.createDefault(instance, 
-                                                       new SubscriberConfig()
-                                                       .withStreamConfig(streamConfig)
-                                                       .withGroup("test-group"));
-// 10 polls, at 100 ms each
-for (int i = 0; i < 10; i++) {
-  final RecordBatch records = subscriber.poll(100);
-  
-  if (! records.isEmpty()) {
-    zlg.i("Got %d record(s)", z -> z.arg(records::size));
-    records.forEach(r -> zlg.i(new String(r.getData())));
-    subscriber.confirm();
-  }
-}
-
-// clean up
-publisher.terminate().joinSilently();
-subscriber.terminate().joinSilently();
-instance.shutdown();
-```
-
-Some things to note:
-
-* If your application is already using Hazelcast, you should recycle the same `HazelcastInstance` for HazelQ as you use elsewhere in your process. (Unless you wish to bulkhead the two for whatever reason.) Otherwise, you can create a new instance as in the above example.
-* The `publishAsync()` method is non-blocking, returning a `CompletableFuture` that is assigned the record's offset. Alternatively, you can call an overloaded version, providing a `PublishCallback` to be notified when the record was actually sent, or if an error occurred. Most things in HazelQ are done asynchronously.
-* The `StreamConfig` objects must be identical among all publishers and subscribers. The stream capacity, number of sync/async replicas, persistence configuration and so forth, must be agreed upon in advance by all parties.
-* Calling `withGroup()` on the `SubscriberConfig` assigns a subscriber group, meaning that only one subscriber will be allowed to pull messages off the stream (others will hold back). It also means that the subscriber can persist its offset on the grid by calling `confirm()`, allowing other subscribers to take over from the point of failure. This has the effect of advancing the group's read offset to the last offset successfully read by the active subscriber. Alternatively, a subscriber can call `confirm(long)`, passing in a specific offset.  
-* Polling with `Subscriber.poll()` returns a (possibly empty) batch of records. The timeout is in milliseconds (consistently throughout HazelQ) and sets the upper bound on the blocking time. If there are accumulated records in the buffer prior to calling `poll()`, then the latter will return without further blocking.
-* Clean up the publisher and subscriber instances by calling `terminate().joinSilently()`. This both instructs the it to stop and subsequently awaits its termination.
-
-**Note:** We use [Zerolog](https://github.com/obsidiandynamics/zerolog) within HazelQ and also in our examples for low-overhead logging.
-
-## Working with byte arrays
-We want to keep to a light feature set until the project matures to a production-grade system. For the time being, there is no concept of object (de)serialization built into HazelQ; instead records deal directly with byte arrays. While it means you have to push your own bytes around, it gives you the most flexibility with the choice of serialization frameworks. In practice, all serializers convert between objects and either character or byte streams, so plugging in a serializer is a trivial matter.
-
-Future iterations will include a mechanism for serializing objects and, crucially, _pipelining_ — where (de)serialization is performed in a different thread to the rest of the application, thereby capitalising on multi-core CPUs.
-
-## Switching providers
-`HazelcastProvider` is an abstract factory for obtaining `HazelcastInstance` objects with varying behaviour. Its use is completely optional — if you are already accustomed to using a `HazelcastInstanceFactory`, you may continue to do so. The real advantage is that it allows for dependency inversion — decoupling your application from the physical grid. Presently, there are two implementations:
-
-* `GridProvider` is a factory for `HazelcastInstance` instances that connect to a real grid. The instances produced are the same as those made by `HazelcastInstanceFactory`.
-* `TestProvider` is a factory for connecting to a virtual 'test' grid; one which is simulated internally and doesn't leave the confines of the JVM. `TestProvider` requires the `hazelq-assurance` module on the classpath.
-
-
-# Use cases
-## Stream processing
-
-## Pub-sub topics
-
-## Message queue
 
 # Roadmap
 * Lanes within streams: **HIGH PRIORITY**
