@@ -221,7 +221,7 @@ compile "com.obsidiandynamics.hazelq:hazelq-core:x.y.z"
 compile "com.hazelcast:hazelcast:3.10-BETA-2"
 ```
 
-**Note:** Although HazelQ is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with HazelQ. This allows you to use any 3.x API-compatible HazelQ client library in your application without being constrained by transitive dependencies.
+**Note:** Although HazelQ is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with HazelQ. This lets you to use any 3.x API-compatible HazelQ client library in your application without being constrained by transitive dependencies.
 
 HazelQ is packaged as two separate modules:
 
@@ -234,10 +234,71 @@ testCompile "com.hazelcast:hazelcast:3.10-BETA-2"
 ```
 
 ## A pub-sub example
+The following snippet publishes a message and consumes it from a polling loop.
 
 ```java
+// set up a Zerolog logger
+final Zlg zlg = Zlg.forDeclaringClass().get();
 
+// configure Hazelcast
+System.setProperty("hazelcast.logging.class", ZlgFactory.class.getName());
+final HazelcastProvider provider = GridProvider.getInstance();
+final HazelcastInstance instance = provider.createInstance(new Config());
+
+// the stream config is shared between all publishers and subscribers
+final StreamConfig streamConfig = new StreamConfig().withName("test-stream");
+
+// create a publisher and send a message
+final Publisher publisher = Publisher.createDefault(instance,
+                                                    new PublisherConfig()
+                                                    .withStreamConfig(streamConfig));
+
+publisher.publishAsync(new Record("Hello world".getBytes()));
+
+// create a subscriber for a test group and poll for records
+final Subscriber subscriber = Subscriber.createDefault(instance, 
+                                                       new SubscriberConfig()
+                                                       .withStreamConfig(streamConfig)
+                                                       .withGroup("test-group"));
+// 10 polls, at 100 ms each
+for (int i = 0; i < 10; i++) {
+  final RecordBatch records = subscriber.poll(100);
+  
+  if (! records.isEmpty()) {
+    zlg.i("Got %d record(s)", z -> z.arg(records::size));
+    records.forEach(r -> zlg.i(new String(r.getData())));
+    subscriber.confirm();
+  }
+}
+
+// clean up
+publisher.terminate().joinSilently();
+subscriber.terminate().joinSilently();
+instance.shutdown();
 ```
+
+Some things to note:
+
+* If your application is already using Hazelcast, you should recycle the same `HazelcastInstance` for HazelQ as you use elsewhere in your process. (Unless you wish to bulkhead the two for whatever reason.) Otherwise, you can create a new instance as in the above example.
+* The `publishAsync()` method is non-blocking, returning a `CompletableFuture` that is assigned the record's offset. Alternatively, you can call an overloaded version, providing a `PublishCallback` to be notified when the record was actually sent, or if an error occurred. Most things in HazelQ are done asynchronously.
+* The `StreamConfig` objects must be identical among all publishers and subscribers. The stream capacity, number of sync/async replicas, persistence configuration and so forth, must be agreed upon in advance by all parties.
+* Calling `withGroup()` on the `SubscriberConfig` assigns a subscriber group, meaning that only one subscriber will be allowed to pull messages off the stream (others will hold back). It also means that the subscriber can persist its offset on the grid by calling `confirm()`, allowing other subscribers to take over from the point of failure. This has the effect of advancing the group's read offset to the last offset successfully read by the active subscriber. Alternatively, a subscriber can call `confirm(long)`, passing in a specific offset.  
+* Polling with `Subscriber.poll()` returns a (possibly empty) batch of records. The timeout is in milliseconds (consistently throughout HazelQ) and sets the upper bound on the blocking time. If there are accumulated records in the buffer prior to calling `poll()`, then the latter will return without further blocking.
+* Clean up the publisher and subscriber instances by calling `terminate().joinSilently()`. This both instructs the it to stop and subsequently awaits its termination.
+
+**Note:** We use [Zerolog](https://github.com/obsidiandynamics/zerolog) within HazelQ and also in our examples for low-overhead logging.
+
+## Working with byte arrays
+We want to keep to a light feature set until the project matures to a production-grade system. For the time being, there is no concept of object (de)serialization built into HazelQ; instead records deal directly with byte arrays. While it means you have to push your own bytes around, it gives you the most flexibility with the choice of serialization frameworks. In practice, all serializers convert between objects and either character or byte streams, so plugging in a serializer is a trivial matter.
+
+Future iterations will include a mechanism for serializing objects and, crucially, _pipelining_ — where (de)serialization is performed in a different thread to the rest of the application, thereby capitalising on multi-core CPUs.
+
+## Switching providers
+`HazelcastProvider` is an abstract factory for obtaining `HazelcastInstance` objects with varying behaviour. Its use is completely optional — if you are already accustomed to using a `HazelcastInstanceFactory`, you may continue to do so. The real advantage is that it allows for dependency inversion — decoupling your application from the physical grid. Presently, there are two implementations:
+
+* `GridProvider` is a factory for `HazelcastInstance` instances that connect to a real grid. The instances produced are the same as those made by `HazelcastInstanceFactory`.
+* `TestProvider` is a factory for connecting to a virtual 'test' grid; one which is simulated internally and doesn't leave the confines of the JVM. `TestProvider` requires the `hazelq-assurance` module on the classpath.
+
 
 # Use cases
 ## Stream processing

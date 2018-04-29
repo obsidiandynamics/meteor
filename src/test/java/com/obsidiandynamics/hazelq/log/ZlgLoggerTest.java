@@ -65,7 +65,7 @@ public final class ZlgLoggerTest {
     
     logger.log(Level.WARNING, "test message", cause);
     assertEquals(1, logTarget.entries()
-                 .forLevel(LogLevel.WARN).containing("test message").withException(IOException.class).list().size());
+                 .forLevel(LogLevel.WARN).containing("test message").withThrowableType(IOException.class).list().size());
   }
   
   @Test
@@ -79,7 +79,7 @@ public final class ZlgLoggerTest {
     
     logger.log(event);
     assertEquals(1, logTarget.entries()
-                 .forLevel(LogLevel.WARN).containing("test message").withException(IOException.class).list().size());
+                 .forLevel(LogLevel.WARN).containing("test message").withThrowableType(IOException.class).list().size());
   }
   
   @Test

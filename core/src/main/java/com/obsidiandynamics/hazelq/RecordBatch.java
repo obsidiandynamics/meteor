@@ -35,4 +35,16 @@ public interface RecordBatch extends Iterable<Record> {
   default void readInto(Collection<? super Record> sink) {
     iterator().forEachRemaining(sink::add);
   }
+  
+  default Record first() {
+    final List<Record> records = toList();
+    if (records.isEmpty()) throw new NoSuchElementException();
+    return records.get(0);
+  }
+  
+  default Record last() {
+    final List<Record> records = toList();
+    if (records.isEmpty()) throw new NoSuchElementException();
+    return records.get(records.size() - 1);
+  }
 }

@@ -13,7 +13,8 @@ public final class SyncPubSubSample {
 
     // configure Hazelcast
     System.setProperty("hazelcast.logging.class", ZlgFactory.class.getName());
-    final HazelcastInstance instance = GridProvider.getInstance().createInstance(new Config());
+    final HazelcastProvider provider = GridProvider.getInstance();
+    final HazelcastInstance instance = provider.createInstance(new Config());
 
     // the stream config is shared between all publishers and subscribers
     final StreamConfig streamConfig = new StreamConfig().withName("test-stream");
@@ -29,10 +30,22 @@ public final class SyncPubSubSample {
     final Subscriber subscriber = Subscriber.createDefault(instance, 
                                                            new SubscriberConfig()
                                                            .withStreamConfig(streamConfig)
-                                                           .withGroup("test-stream"));
-    for (;;) {
+                                                           .withGroup("test-group"));
+    // 10 polls, at 100 ms each
+    for (int i = 0; i < 10; i++) {
+      zlg.i("Polling...");
       final RecordBatch records = subscriber.poll(100);
-      zlg.i("Got %d record(s)", z -> z.arg(records::size));
+      
+      if (! records.isEmpty()) {
+        zlg.i("Got %d record(s)", z -> z.arg(records::size));
+        records.forEach(r -> zlg.i(new String(r.getData())));
+        subscriber.confirm();
+      }
     }
+    
+    // clean up
+    publisher.terminate().joinSilently();
+    subscriber.terminate().joinSilently();
+    instance.shutdown();
   }
 }
