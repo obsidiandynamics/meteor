@@ -82,7 +82,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
     } else {
       if (config.getInitialOffsetScheme() == InitialOffsetScheme.NONE) {
         throw new InvalidInitialOffsetSchemeException("Cannot use initial offset scheme " + InitialOffsetScheme.NONE + 
-                                                      " in a group-free context");
+                                                      " in an ungrouped context");
       }
       // performs initial offset assignment
       nextReadOffset = getInitialOffset(false);
@@ -209,13 +209,13 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   
   private void ensureGroupMode() {
     if (leaseCandidate == null) {
-      throw new IllegalStateException("Cannot call this operation in a group-free context");
+      throw new IllegalStateException("Cannot call this operation in an ungrouped context");
     }
   }
   
   private void ensureGroupFreeMode() {
     if (leaseCandidate != null) {
-      throw new IllegalStateException("Cannot call this operation in a group-aware context");
+      throw new IllegalStateException("Cannot call this operation in a grouped context");
     }
   }
   
@@ -223,7 +223,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   public void confirm() {
     ensureGroupMode();
     
-    if (lastReadOffset != Record.UNASSIGNED_OFFSET) {
+    if (lastReadOffset >= 0) {
       confirm(lastReadOffset);
     }
   }

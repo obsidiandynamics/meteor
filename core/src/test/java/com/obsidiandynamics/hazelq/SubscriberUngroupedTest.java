@@ -18,14 +18,14 @@ import com.obsidiandynamics.hazelq.Receiver.*;
 import com.obsidiandynamics.junit.*;
 
 @RunWith(Parameterized.class)
-public final class SubscriberFreeTest extends AbstractPubSubTest {
+public final class SubscriberUngroupedTest extends AbstractPubSubTest {
   @Parameterized.Parameters
   public static List<Object[]> data() {
     return TestCycle.timesQuietly(1);
   }
   
   /**
-   *  Deactivation can only be performed in a group-aware context.
+   *  Deactivation can only be performed in a grouped context.
    */
   @Test(expected=IllegalStateException.class)
   public void testIllegalDeactivate() {
@@ -40,7 +40,7 @@ public final class SubscriberFreeTest extends AbstractPubSubTest {
   }
   
   /**
-   *  Reactivation can only be performed in a group-aware context.
+   *  Reactivation can only be performed in a grouped context.
    */
   @Test(expected=IllegalStateException.class)
   public void testIllegalReactivate() {
@@ -55,7 +55,7 @@ public final class SubscriberFreeTest extends AbstractPubSubTest {
   }
   
   /**
-   *  Offset confirmation can only be performed in a group-aware context.
+   *  Offset confirmation can only be performed in a grouped context.
    */
   @Test(expected=IllegalStateException.class)
   public void testIllegalConfirm() {
@@ -345,7 +345,7 @@ public final class SubscriberFreeTest extends AbstractPubSubTest {
   
   /**
    *  Tests the {@link InitialOffsetScheme#NONE} offset initialisation, which is only allowed in
-   *  a group-aware context.
+   *  a grouped context.
    *  
    *  @throws InterruptedException
    */

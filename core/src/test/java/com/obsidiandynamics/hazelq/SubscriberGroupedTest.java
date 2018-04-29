@@ -19,14 +19,14 @@ import com.obsidiandynamics.junit.*;
 import com.obsidiandynamics.threads.*;
 
 @RunWith(Parameterized.class)
-public final class SubscriberGroupTest extends AbstractPubSubTest {
+public final class SubscriberGroupedTest extends AbstractPubSubTest {
   @Parameterized.Parameters
   public static List<Object[]> data() {
     return TestCycle.timesQuietly(1);
   }
   
   /**
-   *  Seek can only be performed in a group-free context.
+   *  Seek can only be performed in an ungrouped context.
    */
   @Test(expected=IllegalStateException.class)
   public void testIllegalSeek() {
@@ -339,6 +339,28 @@ public final class SubscriberGroupTest extends AbstractPubSubTest {
                                               .withHeapCapacity(capacity)));
     
     s.confirm(0);
+    verifyNoError(eh);
+  }
+  
+  /**
+   *  Tries to confirm the last read offset without having read anything from the stream.
+   *  Should be quietly ignored.
+   */
+  @Test
+  public void testConfirmLastReadWithoutReading() {
+    final String stream = "s";
+    final String group = randomGroup();
+    final int capacity = 10;
+    final ExceptionHandler eh = mockExceptionHandler();
+    final DefaultSubscriber s = 
+        configureSubscriber(new SubscriberConfig()
+                            .withGroup(group)
+                            .withExceptionHandler(eh)
+                            .withStreamConfig(new StreamConfig()
+                                              .withName(stream)
+                                              .withHeapCapacity(capacity)));
+    
+    s.confirm();
     verifyNoError(eh);
   }
   
