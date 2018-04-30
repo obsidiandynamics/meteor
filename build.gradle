@@ -40,7 +40,7 @@ allprojects {
     fulcrumVersion = "0.14.0"
     yconfVersion = "0.3.1"
     zerologVersion = "0.14.0"
-    hazelcastVersion = "3.10"
+    hazelcastVersion = "3.10-BETA-2"
   }
   
   dependencies {

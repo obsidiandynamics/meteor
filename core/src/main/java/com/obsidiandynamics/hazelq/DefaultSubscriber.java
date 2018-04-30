@@ -132,8 +132,10 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
         }
       
         final ICompletableFuture<ReadResultSet<byte[]>> f = buffer.readManyAsync(nextReadOffset, 1, 1_000, StreamHelper::isNotNull);
+        
+        final long waitMillis = computeWait(wake, Long.MAX_VALUE);
         try {
-          final ReadResultSet<byte[]> resultSet = f.get(computeWait(wake, Long.MAX_VALUE), TimeUnit.MILLISECONDS);
+          final ReadResultSet<byte[]> resultSet = f.get(waitMillis, TimeUnit.MILLISECONDS);
           lastReadOffset = resultSet.getSequence(resultSet.size() - 1);
           nextReadOffset = lastReadOffset + 1;
           return readBatch(resultSet);
@@ -150,11 +152,11 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
             nextReadOffset = ffNextReadOffset;
           } else {
             final String serviceInfo = getServiceInfo(buffer.getRingbuffer());
-            final String m = String.format("Error reading at offset %d from stream %s [%s]",
+            final String m = String.format("Error reading at offset %,d from stream %s [%s]",
                                            nextReadOffset, config.getStreamConfig().getName(), serviceInfo);
             config.getExceptionHandler().onException(m, e.getCause());
             f.cancel(true);
-            Thread.sleep(timeoutMillis);
+            Thread.sleep(waitMillis);
             return RecordBatch.empty();
           }
         } catch (TimeoutException e) {
@@ -167,9 +169,9 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
         }
       } else {
         nextReadOffset = Record.UNASSIGNED_OFFSET;
-        final long sleep = computeWait(wake, MAX_UNASSIGNED_SLEEP_MILLIS);
-        if (sleep > 0) {
-          Thread.sleep(sleep);
+        final long sleepMillis = computeWait(wake, MAX_UNASSIGNED_SLEEP_MILLIS);
+        if (sleepMillis > 0) {
+          Thread.sleep(sleepMillis);
         } else {
           return RecordBatch.empty();
         }
@@ -188,7 +190,8 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   
   private long getInitialOffset(boolean useGroups) {
     // resolve AUTO to the appropriate scheme (EARLIEST/LATEST/NONE) depending on group mode
-    final InitialOffsetScheme concreteInitialOffsetScheme = config.getInitialOffsetScheme().resolveConcreteScheme(useGroups);
+    final InitialOffsetScheme concreteInitialOffsetScheme = 
+        config.getInitialOffsetScheme().resolveConcreteScheme(useGroups);
     if (concreteInitialOffsetScheme == InitialOffsetScheme.EARLIEST) {
       return 0;
     } else if (concreteInitialOffsetScheme == InitialOffsetScheme.LATEST) {
@@ -201,7 +204,10 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   private static RecordBatch readBatch(ReadResultSet<byte[]> resultSet) {
     final List<Record> records = new ArrayList<>(resultSet.size());
     long offset = resultSet.getSequence(0);
+    //int i = 0;
     for (byte[] result : resultSet) {
+      //TODO
+      //System.out.println("rcvd " + SimpleLongMessage.unpack(result) + " seq " + resultSet.getSequence(i++));
       records.add(new Record(result, offset++));
     }
     return new ListRecordBatch(records);
@@ -223,7 +229,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   public void confirm() {
     ensureGroupMode();
     
-    if (lastReadOffset >= 0) {
+    if (lastReadOffset >= StreamHelper.SMALLEST_OFFSET) {
       confirm(lastReadOffset);
     }
   }

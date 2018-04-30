@@ -102,11 +102,14 @@ public abstract class AbstractPubSubTest {
   }
   
   protected static final ExceptionHandler mockExceptionHandler() {
+    return mockExceptionHandler(Zlg.nop());
+  }
+  
+  protected static final ExceptionHandler mockExceptionHandler(Zlg zlg) {
     final ExceptionHandler mock = mock(ExceptionHandler.class);
     doAnswer(invocation -> {
       final String summary = invocation.getArgument(0);
       final Throwable error = invocation.getArgument(1);
-      final Zlg zlg = Zlg.forDeclaringClass().get();
       zlg.w(summary, error);
       return null;
     }).when(mock).onException(any(), any());

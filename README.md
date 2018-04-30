@@ -144,7 +144,7 @@ The relationship between publishers, streams and subscribers is depicted below.
                            +------------------------------------+
 ```
 
-The subscriber group is quite an understated concept that's pivotal to the flexibility of a message streaming platform. By simply varying the affinity of subscribers with their groups, one can arrive at vastly different distribution topologies — from a topic-like, pub-sub behaviour to an MQ-style, point-to-point model. And crucially, because messages are never truly consumed (the advancing offset only creates the illusion of consumption), one can superimpose disparate distribution topologies over a single message stream.
+The subscriber group is a somewhat understated concept that's pivotal to the versatility of a message streaming platform. By simply varying the affinity of subscribers with their groups, one can arrive at vastly different distribution topologies — from a topic-like, pub-sub behaviour to an MQ-style, point-to-point model. And crucially, because messages are never truly consumed (the advancing offset only creates the illusion of consumption), one can superimpose disparate distribution topologies over a single message stream.
 
 ### At-least-once delivery and exactly-once processing
 HazelQ takes a prudent approach to data integrity — providing at-least-once message delivery guarantees. If a subscriber within a group is unable to completely process a message (for example, if it crashes midstream), the last message along with any other unconfirmed messages will be redelivered to another subscriber within the same group. This is why it's so important for a subscriber to only confirm an offset when it has completely dealt with the message, not before.
@@ -261,7 +261,22 @@ We want to keep to a light feature set until the project matures to a production
 * `TestProvider` is a factory for connecting to a virtual 'test' grid; one which is simulated internally and doesn't leave the confines of the JVM. `TestProvider` requires the `hazelq-assurance` module on the classpath.
 
 ## Initial offset scheme
-//TODO
+When a subscriber attaches to a stream for the first time, it needs an initial offset to start consuming from. This is configured by passing an `InitialSchemeOffset` enum to the `SubscriberConfig`, as shown in the snippet below.
+
+```java
+new SubscriberConfig().withInitialOffsetScheme(InitialOffsetScheme.AUTO)
+```
+
+The following table describes the different schemes and their behaviour, which varies depending on whether the subscriber is grouped or ungrouped. The default scheme is `AUTO`.
+
+Scheme          |Ungrouped subscriber behaviour      |Grouped subscriber behaviour
+:---------------|:-----------------------------------|:---------------------------
+`EARLIEST`      |Starts from the first available offset in the stream.|Does nothing if a persisted offset exists; otherwise starts from the first available offset in the stream.
+`LATEST`        |Starts from the last available offset in the stream.|Does nothing if a persisted offset exists; otherwise starts from the latest available offset in the stream.
+`NONE`          |Illegal in this context; throws an `InvalidInitialOffsetSchemeException` when initialising the subscriber.|Does nothing if a persisted offset exists; otherwise will throw an `OffsetLoadException` when initialising the subscriber.
+`AUTO`          |Acts as `LATEST`.                   |Acts as `EARLIEST`.
+
+In addition to the initial offset reset scheme, an ungrouped subscriber may be also be repositioned to any offset by calling the `Subscriber.seek(long offset)` method, specifying the new offset. The offset must be in the valid range (between the first and last offsets in the stream), otherwise an error will occur either during a call to `offset()` or later, during a `poll()`.
 
 # Use cases
 ## Stream processing

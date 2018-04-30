@@ -211,6 +211,29 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
   }
   
   /**
+   *  Tests a seek to a position outside of the buffer's allowable range.
+   *  
+   *  @throws InterruptedException
+   */
+  @Test
+  public void testSeekIllegalArgumentBeyondLastOffset() throws InterruptedException {
+    final String stream = "s";
+    final int capacity = 10;
+    final ExceptionHandler eh = mockExceptionHandler();
+
+    final DefaultSubscriber s =
+        configureSubscriber(new SubscriberConfig()
+                            .withExceptionHandler(eh)
+                            .withStreamConfig(new StreamConfig()
+                                              .withName(stream)
+                                              .withHeapCapacity(capacity)));
+    s.seek(1);
+    s.poll(1_000);
+    
+    verify(eh).onException(notNull(), isA(IllegalArgumentException.class));
+  }
+  
+  /**
    *  Tests read failure by rigging the ringbuffer to throw an exception when reading.
    *  
    *  @throws InterruptedException

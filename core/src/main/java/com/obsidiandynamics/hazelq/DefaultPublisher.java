@@ -76,9 +76,13 @@ final class DefaultPublisher implements Publisher, Joinable {
   }
   
   private void sendNow(Record record, PublishCallback callback) {
+    //TODO
+    //System.out.println("pend " + SimpleLongMessage.unpack(record.getData()));
     final ICompletableFuture<Long> f = buffer.addAsync(record.getData(), OverflowPolicy.OVERWRITE);
     f.andThen(new ExecutionCallback<Long>() {
       @Override public void onResponse(Long offset) {
+        //TODO
+        //System.out.println("sent " + SimpleLongMessage.unpack(record.getData()) + " seq " + offset);
         final long offsetPrimitive = offset;
         record.setOffset(offsetPrimitive);
         callback.onComplete(offsetPrimitive, null);
