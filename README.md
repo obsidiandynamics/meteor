@@ -1,20 +1,27 @@
 <img src="https://raw.githubusercontent.com/wiki/obsidiandynamics/hazelq/images/hazelq-logo.png" width="90px" alt="logo"/> HazelQ
 ===
-Message streaming over Hazelcast IMDG.
+Real-time message streaming over Hazelcast IMDG.
 
 [![Download](https://api.bintray.com/packages/obsidiandynamics/hazelq/hazelq-core/images/download.svg) ](https://bintray.com/obsidiandynamics/hazelq/hazelq-core/_latestVersion)
 [![Build](https://travis-ci.org/obsidiandynamics/hazelq.svg?branch=master) ](https://travis-ci.org/obsidiandynamics/hazelq#)
 [![codecov](https://codecov.io/gh/obsidiandynamics/hazelq/branch/master/graph/badge.svg)](https://codecov.io/gh/obsidiandynamics/hazelq)
 
 # What is HazelQ
-**TL;DR** — HazelQ is a broker-less, embeddable version of Kafka that runs in an In-Memory Data Grid.
+**TL;DR** — HazelQ is a broker-less, lightweight embeddable version of Kafka that runs in an In-Memory Data Grid.
 
 ## History
 HazelQ started out as a part of Blackstrom — a research project into ultra-fast transactional mesh fabric technology for distributed micro-service and event-driven architectures. Blackstrom originally relied on Kafka, but we longed for a more lightweight distributed ledger for testing, simulation and small-scale deployments. It had to have a **zero deployment footprint** (no brokers or other middleware), be reasonably performant, reliable and highly available. We wanted Kafka, but without the brokers.
 
+To that point, HazelQ wasn't designed to be a 'better Kafka', but rather an alternative streaming platform that has its own merits and may be a better fit in certain contexts.
+
 HazelQ showed lots of potential early in its journey, surpassing all expectations in terms of performance and scalability. Eventually it got broken off into a separate project, and so here we are.
 
 ## Fundamentals
+### Real-time message streaming
+The purpose of a real-time message streaming platform is to enable very high volume, low latency distribution of message-oriented content among distributed processes that are completely decoupled from each other. These process fall into one of two categories: publishers (emitters of message content) and subscribers (consumers of messages).
+
+Message streaming platforms are similar to traditional message queues, but generally offer stronger temporal guarantees. Whereas messages in an MQ tend to be arbitrarily ordered and generally independent of one another, messages in a stream tend to be strongly ordered, often chronologically or causally. For this reason, message streaming tends to be a better fit for implementing Event-Driven Architectures, encompassing event sourcing, eventual consistency and CQRS concepts.
+
 ### Streams, records and offsets
 A stream is a totally ordered sequence of records, and is fundamental to HazelQ. A record has an ID (64-bit integer) and a payload, which is an array of bytes. 'Totally ordered' means that, for any given publisher, records will be written in the order they were emitted. If record _P_ was published before _Q_, then _P_ will precede _Q_ in the stream. Furthermore, they will be read in the same order by all subscribers; _P_ will always be read before _Q_. (Depending on the context, we may sometimes use the term _message_ to refer to a record, as messaging is the dominant use case for HazelQ.)
 
@@ -215,13 +222,15 @@ Some things to note:
 
 * If your application is already using Hazelcast, you should recycle the same `HazelcastInstance` for HazelQ as you use elsewhere in your process. (Unless you wish to bulkhead the two for whatever reason.) Otherwise, you can create a new instance as in the above example.
 * The `publishAsync()` method is non-blocking, returning a `CompletableFuture` that is assigned the record's offset. Alternatively, you can call an overloaded version, providing a `PublishCallback` to be notified when the record was actually sent, or if an error occurred. Most things in HazelQ are done asynchronously.
-* The `StreamConfig` objects must be identical among all publishers and subscribers. The stream capacity, number of sync/async replicas, persistence configuration and so forth, must be agreed upon in advance by all parties.
+* The `StreamConfig` objects _must_ be identical among all publishers and subscribers. The stream capacity, number of sync/async replicas, persistence configuration and so forth, must be agreed upon in advance by all parties.
 * Calling `withGroup()` on the `SubscriberConfig` assigns a subscriber group, meaning that only one subscriber will be allowed to pull messages off the stream (others will hold back). It also means that the subscriber can persist its offset on the grid by calling `confirm()`, allowing other subscribers to take over from the point of failure. This has the effect of advancing the group's read offset to the last offset successfully read by the active subscriber. Alternatively, a subscriber can call `confirm(long)`, passing in a specific offset.  
 * Polling with `Subscriber.poll()` returns a (possibly empty) batch of records. The timeout is in milliseconds (consistently throughout HazelQ) and sets the upper bound on the blocking time. If there are accumulated records in the buffer prior to calling `poll()`, then the latter will return without further blocking.
 * Clean up the publisher and subscriber instances by calling `terminate().joinSilently()`. This both instructs the it to stop and subsequently awaits its termination.
 
 ## Logging
-We use [Zerolog](https://github.com/obsidiandynamics/zerolog) (Zlg) within HazelQ and also in our examples for low-overhead logging. While it's completely optional, Zlg works well with SLF4J and is optimised for performance-intensive applications. An additional advantage of bridging to Zlg is that it preserves call site (class/method/line) location information for all logs that come out of Hazelcast. (By default, Hazelcast loses location information when binding to SLF4J; using Zlg eliminates this problem.)
+We use [Zerolog](https://github.com/obsidiandynamics/zerolog) (Zlg) within HazelQ and also in our examples for low-overhead logging. While it's completely optional, Zlg works well with SLF4J and is optimised for performance-intensive applications. To install the Zlg bridge, either invoke `HazelcastZlgBridge.install()` at the start of your application (before you obtain a Hazelcast instance), or set the system property `hazelcast.logging.class` to `com.obsidiandynamics.zerolog.ZlgFactory`.
+
+For SLF4J users, an added advantage of bridging to Zlg is that it preserves call site (class/method/line) location information for all logs that come out of Hazelcast. The SLF4J binding that's bundled Hazelcast is rather simplistic, forwarding minimal information to SLF4J. The Zlg-based binding is a comprehensive implementation, supporting SLFJ4's location-aware logging API.
 
 To bind Zlg to SLF4J, add the following to your `build.gradle` in the `dependencies` section, along with your other SL4J and concrete logger dependencies. 
 
@@ -236,7 +245,7 @@ Replace the version in the snippet with the version on the Zlg download badge.
 ## Working with byte arrays
 We want to keep to a light feature set until the project matures to a production-grade system. For the time being, there is no concept of object (de)serialization built into HazelQ; instead records deal directly with byte arrays. While it means you have to push your own bytes around, it gives you the most flexibility with the choice of serialization frameworks. In practice, all serializers convert between objects and either character or byte streams, so plugging in a serializer is a trivial matter.
 
-Future iterations will include a mechanism for serializing objects and, crucially, _pipelining_ — where (de)serialization is performed in a different thread to the rest of the application, thereby capitalising on multi-core CPUs.
+**Note:** Future iterations may include a mechanism for serializing objects and, crucially, _pipelining_ — where (de)serialization is performed in a different thread to the rest of the application, thereby capitalising on multi-core CPUs.
 
 ## Switching providers
 `HazelcastProvider` is an abstract factory for obtaining `HazelcastInstance` objects with varying behaviour. Its use is completely optional — if you are already accustomed to using a `HazelcastInstanceFactory`, you may continue to do so. The real advantage is that it allows for dependency inversion — decoupling your application from the physical grid. Presently, there are two implementations:
@@ -244,12 +253,16 @@ Future iterations will include a mechanism for serializing objects and, cruciall
 * `GridProvider` is a factory for `HazelcastInstance` instances that connect to a real grid. The instances produced are the same as those made by `HazelcastInstanceFactory`.
 * `TestProvider` is a factory for connecting to a virtual 'test' grid; one which is simulated internally and doesn't leave the confines of the JVM. `TestProvider` requires the `hazelq-assurance` module on the classpath.
 
+## Initial offset scheme
+//TODO
+
 # Use cases
 ## Stream processing
 
 ## Pub-sub topics
 
 ## Message queue
+// TODO dead letter
 
 # Architecture
 To fully get your head around the design of HazelQ, you need to first understand [Hazelcast and the basics of In-Memory Data Grids](https://hazelcast.com/use-cases/imdg/). In short, an IMDG pools the memory heap of multiple processes across different machines, creating the illusion of a massive computer comprising lots of cooperating processes, with the combined computational (RAM & CPU) resources. An IMDG is inherently elastic; processes are free to join and leave the grid at any time. The underlying data is sharded for performance and replicated across multiple processes for availability, and can be optionally persisted for durability.
