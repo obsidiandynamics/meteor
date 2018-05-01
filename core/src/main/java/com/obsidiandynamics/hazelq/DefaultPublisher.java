@@ -1,5 +1,8 @@
 package com.obsidiandynamics.hazelq;
 
+import java.util.*;
+import java.util.concurrent.*;
+
 import com.hazelcast.core.*;
 import com.hazelcast.ringbuffer.*;
 import com.obsidiandynamics.hazelq.util.*;
@@ -10,6 +13,7 @@ import com.obsidiandynamics.worker.*;
 final class DefaultPublisher implements Publisher, Joinable {
   private static final int PUBLISH_MAX_YIELDS = 100;
   private static final int PUBLISH_BACKOFF_MILLIS = 1;
+  private static final int MAX_BATCH_SIZE = 1_000;
   
   private static class AsyncRecord {
     final Record record;
@@ -64,36 +68,58 @@ final class DefaultPublisher implements Publisher, Joinable {
   }
   
   private void publisherCycle(WorkerThread t) throws InterruptedException {
-    final AsyncRecord rec = queueConsumer.poll();
-    if (rec != null) {
-      sendNow(rec.record, rec.callback);
-      yields = 0;
-    } else if (yields++ < PUBLISH_MAX_YIELDS) {
-      Thread.yield();
-    } else {
-      Thread.sleep(PUBLISH_BACKOFF_MILLIS);
+    List<AsyncRecord> recs = null;
+    
+    for (;;) {
+      final AsyncRecord rec = queueConsumer.poll();
+      if (rec != null) {
+        if (recs == null) {
+          recs = new ArrayList<>();
+          yields = 0;
+        }
+        recs.add(rec);
+        if (recs.size() == MAX_BATCH_SIZE) {
+          sendNow(recs);
+          return;
+        }
+      } else {
+        if (recs != null) {
+          sendNow(recs);
+        } else if (yields++ < PUBLISH_MAX_YIELDS) {
+          Thread.yield();
+        } else {
+          Thread.sleep(PUBLISH_BACKOFF_MILLIS);
+        }
+        return;
+      }
     }
   }
   
-  private void sendNow(Record record, PublishCallback callback) {
-    //TODO
-    //System.out.println("pend " + SimpleLongMessage.unpack(record.getData()));
-    final ICompletableFuture<Long> f = buffer.addAsync(record.getData(), OverflowPolicy.OVERWRITE);
-    f.andThen(new ExecutionCallback<Long>() {
-      @Override public void onResponse(Long offset) {
-        //TODO
-        //System.out.println("sent " + SimpleLongMessage.unpack(record.getData()) + " seq " + offset);
-        final long offsetPrimitive = offset;
-        record.setOffset(offsetPrimitive);
-        callback.onComplete(offsetPrimitive, null);
-      }
+  private void sendNow(List<AsyncRecord> recs) throws InterruptedException {
+    final List<byte[]> items = new ArrayList<>(recs.size());
+    final int size = recs.size();
+    for (int i = 0; i < size; i++) {
+      items.add(recs.get(i).record.getData());
+    }
+    
+    final ICompletableFuture<Long> f = buffer.addAllAsync(items, OverflowPolicy.OVERWRITE);
+    try {
+      final long lastSequence = f.get();
+      final long firstSequence = lastSequence - size + 1;
 
-      @Override public void onFailure(Throwable error) {
-        callback.onComplete(Record.UNASSIGNED_OFFSET, error);
+      for (int i = 0; i < size; i++) {
+        final AsyncRecord rec = recs.get(i);
+        final long offset = firstSequence + i;
+        rec.record.setOffset(offset);
+        rec.callback.onComplete(offset, null);
       }
-    });
+    } catch (ExecutionException e) {
+      for (AsyncRecord rec : recs) {
+        rec.callback.onComplete(Record.UNASSIGNED_OFFSET, e.getCause());
+      }
+    }
   }
-  
+
   @Override
   public long publishDirect(Record record) {
     final long sequence = buffer.add(record.getData());

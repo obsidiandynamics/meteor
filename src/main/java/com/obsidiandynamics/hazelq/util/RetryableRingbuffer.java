@@ -1,5 +1,7 @@
 package com.obsidiandynamics.hazelq.util;
 
+import java.util.*;
+
 import com.hazelcast.core.*;
 import com.hazelcast.ringbuffer.*;
 import com.obsidiandynamics.retry.*;
@@ -18,10 +20,10 @@ public final class RetryableRingbuffer<E> {
     return ringbuffer;
   }
   
-  public ICompletableFuture<Long> addAsync(E item, OverflowPolicy overflowPolicy) {
-    return retry.run(() -> ringbuffer.addAsync(item, overflowPolicy));
+  public ICompletableFuture<Long> addAllAsync(Collection<? extends E> collection, OverflowPolicy overflowPolicy) {
+    return retry.run(() -> ringbuffer.addAllAsync(collection, overflowPolicy));
   }
-
+  
   public long add(E item) {
     return retry.run(() -> ringbuffer.add(item));
   }

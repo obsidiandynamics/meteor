@@ -4,9 +4,10 @@ import java.io.*;
 import java.util.*;
 
 import com.hazelcast.core.*;
+import com.obsidiandynamics.func.*;
 
-public final class HeapRingbufferStore implements RingbufferStore<byte[]> {
-  public static final class Factory implements RingbufferStoreFactory<byte[]>, Serializable {
+public final class HeapRingbufferStore implements RingbufferStore<Object> {
+  public static final class Factory implements RingbufferStoreFactory<Object>, Serializable {
     private static final long serialVersionUID = 1L;
 
     @Override
@@ -20,13 +21,16 @@ public final class HeapRingbufferStore implements RingbufferStore<byte[]> {
   private HeapRingbufferStore() {}
 
   @Override
-  public void store(long sequence, byte[] data) {
-    stored.add(data);
+  public void store(long sequence, Object data) {
+    stored.add(Classes.cast(data));
   }
 
   @Override
-  public void storeAll(long firstItemSequence, byte[][] items) {
-    for (byte[] item : items) stored.add(item);
+  public void storeAll(long firstItemSequence, Object[] items) {
+    long sequence = firstItemSequence;
+    for (Object item : items) {
+      store(sequence++, item);
+    }
   }
 
   @Override

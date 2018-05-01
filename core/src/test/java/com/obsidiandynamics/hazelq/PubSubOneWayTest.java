@@ -23,11 +23,11 @@ import com.obsidiandynamics.zerolog.*;
 public final class PubSubOneWayTest extends AbstractPubSubTest {
   private static final Zlg zlg = Zlg.forClass(MethodHandles.lookup().lookupClass()).get();
   
-  private final int SCALE = Testmark.getOptions(Scale.class, Scale.unity()).magnitude();
+  private final int scale = Testmark.getOptions(Scale.class, Scale.unity()).magnitude();
   
   @Test
   public void testOneWay() {
-    testOneWay(2, 4, 10_000 * SCALE, 10, new InstancePool(2, this::newInstance), new OneWayOptions());
+    testOneWay(2, 4, 10_000 * scale, 10, true, new InstancePool(2, this::newInstance), new OneWayOptions());
   }
   
   @Test
@@ -39,14 +39,15 @@ public final class PubSubOneWayTest extends AbstractPubSubTest {
       }};
       final Supplier<InstancePool> poolSupplier = () -> new InstancePool(4, this::newGridInstance);
       final int messageSize = 100;
+      final boolean randomBytes = false; // without compression this really makes no difference
       
-      testOneWay(1, 1, 2_000_000 * SCALE, messageSize, poolSupplier.get(), options);
-      testOneWay(1, 2, 2_000_000 * SCALE, messageSize, poolSupplier.get(), options);
-      testOneWay(1, 4, 2_000_000 * SCALE, messageSize, poolSupplier.get(), options);
-      testOneWay(2, 4, 1_000_000 * SCALE, messageSize, poolSupplier.get(), options);
-      testOneWay(2, 8, 1_000_000 * SCALE, messageSize, poolSupplier.get(), options);
-      testOneWay(4, 8, 500_000 * SCALE, messageSize, poolSupplier.get(), options);
-      testOneWay(4, 16, 500_000 * SCALE, messageSize, poolSupplier.get(), options);
+      testOneWay(1, 1, 2_000_000 * scale, messageSize, randomBytes, poolSupplier.get(), options);
+      testOneWay(1, 2, 2_000_000 * scale, messageSize, randomBytes, poolSupplier.get(), options);
+      testOneWay(1, 4, 2_000_000 * scale, messageSize, randomBytes, poolSupplier.get(), options);
+      testOneWay(2, 4, 1_000_000 * scale, messageSize, randomBytes, poolSupplier.get(), options);
+      testOneWay(2, 8, 1_000_000 * scale, messageSize, randomBytes, poolSupplier.get(), options);
+      testOneWay(4, 8, 500_000 * scale, messageSize, randomBytes, poolSupplier.get(), options);
+      testOneWay(4, 16, 500_000 * scale, messageSize, randomBytes, poolSupplier.get(), options);
     });
   }
   
@@ -56,11 +57,11 @@ public final class PubSubOneWayTest extends AbstractPubSubTest {
   }
   
   private void testOneWay(int publishers, int subscribers, int messagesPerPublisher, int messageSize, 
-                          InstancePool instancePool, OneWayOptions options) {
+                          boolean randomBytes, InstancePool instancePool, OneWayOptions options) {
     final int backlogTarget = 10_000;
     final int checkInterval = backlogTarget;
     final String stream = "s";
-    final byte[] message = new byte[messageSize];
+    final byte[] fixedMessage = randomBytes ? null : new byte[messageSize];
     final int capacity = backlogTarget * publishers * 2;
     final int pollTimeoutMillis = 100;
     
@@ -121,8 +122,16 @@ public final class PubSubOneWayTest extends AbstractPubSubTest {
       Parallel.blocking(publishers, threadNo -> {
         final Publisher p = publishersList.get(threadNo);
         
+        final Random random = new Random();
         for (int i = 0; i < messagesPerPublisher; i++) {
-          p.publishAsync(new Record(message), PublishCallback.nop());
+          final byte[] bytes;
+          if (randomBytes) {
+            bytes = new byte[messageSize];
+            random.nextBytes(bytes);
+          } else {
+            bytes = fixedMessage;
+          }
+          p.publishAsync(new Record(bytes), PublishCallback.nop());
           
           if (i != 0 && i % checkInterval == 0) {
             long lastLogTime = 0;
@@ -162,7 +171,7 @@ public final class PubSubOneWayTest extends AbstractPubSubTest {
   }
   
   public static void main(String[] args) {
-    Testmark.enable();
+    Testmark.enable().withOptions(Scale.by(8));
     JUnitCore.runClasses(PubSubOneWayTest.class);
   }
 }

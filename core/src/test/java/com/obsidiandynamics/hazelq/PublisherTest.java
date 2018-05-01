@@ -17,8 +17,8 @@ import com.hazelcast.util.executor.*;
 
 public final class PublisherTest extends AbstractPubSubTest {
   private static class TestCallback implements PublishCallback {
-    long offset = Record.UNASSIGNED_OFFSET;
-    Throwable error;
+    volatile long offset = Record.UNASSIGNED_OFFSET;
+    volatile Throwable error;
 
     @Override
     public void onComplete(long offset, Throwable error) {
@@ -58,6 +58,7 @@ public final class PublisherTest extends AbstractPubSubTest {
     assertEquals(initialMessages, records.size());
     assertEquals(initialMessages, callbacks.size());
     wait.until(() -> assertEquals(initialMessages, completed(callbacks).size()));
+    assertNoError(callbacks);
     for (int i = 0; i < initialMessages; i++) {
       assertEquals(i, records.get(i).getOffset());
     }
@@ -69,6 +70,7 @@ public final class PublisherTest extends AbstractPubSubTest {
     publish(furtherMessages, p, records, callbacks);
 
     wait.until(() -> assertEquals(initialMessages + furtherMessages, completed(callbacks).size()));
+    assertNoError(callbacks);
     assertEquals(capacity, buffer.size());
     final List<byte[]> allItems = readRemaining(buffer, 0);
     assertEquals(capacity, allItems.size());
@@ -100,6 +102,7 @@ public final class PublisherTest extends AbstractPubSubTest {
     publish(initialMessages, p, records, callbacks);
 
     wait.until(() -> assertEquals(initialMessages, completed(callbacks).size()));
+    assertNoError(callbacks);
     assertEquals(initialMessages, buffer.size());
     final List<byte[]> initialItems = readRemaining(buffer, 0);
     assertEquals(initialMessages, initialItems.size());
@@ -108,6 +111,7 @@ public final class PublisherTest extends AbstractPubSubTest {
     publish(furtherMessages, p, records, callbacks);
 
     wait.until(() -> assertEquals(initialMessages + furtherMessages, completed(callbacks).size()));
+    assertNoError(callbacks);
     assertEquals(capacity, buffer.size());
     final List<byte[]> allItems = readRemaining(buffer, 0);
     assertEquals(initialMessages + furtherMessages, allItems.size());
@@ -160,7 +164,7 @@ public final class PublisherTest extends AbstractPubSubTest {
     when(mockInstance.<byte[]>getRingbuffer(any())).thenReturn(mockBuffer);
     when(mockInstance.getConfig()).thenReturn(realInstance.getConfig());
     final RuntimeException cause = new RuntimeException("error");
-    when(mockBuffer.addAsync(any(), any())).then(invocation -> {
+    when(mockBuffer.addAllAsync(any(), any())).then(invocation -> {
       return new CompletedFuture<>(null, cause, r -> r.run());
     });
 
@@ -226,5 +230,13 @@ public final class PublisherTest extends AbstractPubSubTest {
 
   private static List<TestCallback> completed(List<TestCallback> callbacks) {
     return callbacks.stream().filter(c -> c.isComplete()).collect(Collectors.toList());
+  }
+
+  private static void assertNoError(List<TestCallback> callbacks) {
+    for (TestCallback callback : callbacks) {
+      if (callback.error != null) {
+        throw new AssertionError(callback.error);
+      }
+    }
   }
 }

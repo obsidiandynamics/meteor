@@ -5,8 +5,8 @@ import java.util.*;
 
 import com.hazelcast.core.*;
 
-public final class NopRingbufferStore implements RingbufferStore<byte[]> {
-  public static final class Factory implements RingbufferStoreFactory<byte[]>, Serializable {
+public final class NopRingbufferStore implements RingbufferStore<Object> {
+  public static final class Factory implements RingbufferStoreFactory<Object>, Serializable {
     private static final long serialVersionUID = 1L;
     
     private static final Factory instance = new Factory();
@@ -24,10 +24,10 @@ public final class NopRingbufferStore implements RingbufferStore<byte[]> {
   private NopRingbufferStore() {}
 
   @Override
-  public void store(long sequence, byte[] data) {}
+  public void store(long sequence, Object data) {}
 
   @Override
-  public void storeAll(long firstItemSequence, byte[][] items) {}
+  public void storeAll(long firstItemSequence, Object[] items) {}
 
   @Override
   public byte[] load(long sequence) {

@@ -15,16 +15,16 @@ import com.obsidiandynamics.testmark.*;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public final class PubSubRoundTripTest extends AbstractPubSubTest {
-  private final int SCALE = Testmark.getOptions(Scale.class, Scale.unity()).magnitude();
+  private final int scale = Testmark.getOptions(Scale.class, Scale.unity()).magnitude();
   
   @Test
   public void testRoundTripAsync() {
-    testRoundTrip(100 * SCALE, false, new InstancePool(2, this::newInstance), new RoundTripOptions());
+    testRoundTrip(100 * scale, false, new InstancePool(2, this::newInstance), new RoundTripOptions());
   }
   
   @Test
   public void testRoundTripDirect() {
-    testRoundTrip(100 * SCALE, true, new InstancePool(2, this::newInstance), new RoundTripOptions());
+    testRoundTrip(100 * scale, true, new InstancePool(2, this::newInstance), new RoundTripOptions());
   }
   
   @Test
@@ -33,7 +33,7 @@ public final class PubSubRoundTripTest extends AbstractPubSubTest {
       final RoundTripOptions options = new RoundTripOptions() {{
         verbose = true;
       }};
-      testRoundTrip(100_000 * SCALE, false, new InstancePool(2, this::newGridInstance), options);
+      testRoundTrip(100_000 * scale, false, new InstancePool(2, this::newGridInstance), options);
     });
   }
   
@@ -43,7 +43,7 @@ public final class PubSubRoundTripTest extends AbstractPubSubTest {
       final RoundTripOptions options = new RoundTripOptions() {{
         verbose = true;
       }};
-      testRoundTrip(100_000 * SCALE, true, new InstancePool(2, this::newGridInstance), options);
+      testRoundTrip(100_000 * scale, true, new InstancePool(2, this::newGridInstance), options);
     });
   }
   

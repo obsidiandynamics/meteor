@@ -42,12 +42,12 @@ public final class PubSubTest extends AbstractPubSubTest {
   }
   
   @Test
-  public void testPubSubGroupFree() {
+  public void testPubSubUngrouped() {
     testPubSub(3, 5, new InstancePool(2, this::newInstance), null);
   }
   
   @Test
-  public void testPubSubGroupAware() {
+  public void testPubSubGrouped() {
     testPubSub(3, 5, new InstancePool(2, this::newInstance), randomGroup());
   }
   

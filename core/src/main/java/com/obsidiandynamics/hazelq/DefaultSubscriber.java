@@ -204,10 +204,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   private static RecordBatch readBatch(ReadResultSet<byte[]> resultSet) {
     final List<Record> records = new ArrayList<>(resultSet.size());
     long offset = resultSet.getSequence(0);
-    //int i = 0;
     for (byte[] result : resultSet) {
-      //TODO
-      //System.out.println("rcvd " + SimpleLongMessage.unpack(result) + " seq " + resultSet.getSequence(i++));
       records.add(new Record(result, offset++));
     }
     return new ListRecordBatch(records);
