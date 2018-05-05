@@ -34,7 +34,7 @@ public final class StreamHelperTest {
     StreamHelper.getRingbuffer(instance, streamConfig);
     verify(instance).getConfig();
     
-    final RingbufferConfig r = config.getRingbufferConfig(Namespace.HAZELQ_STREAM.qualify(streamConfig.getName()));
+    final RingbufferConfig r = config.getRingbufferConfig(Namespace.METEOR_STREAM.qualify(streamConfig.getName()));
     assertEquals(streamConfig.getAsyncReplicas(), r.getAsyncBackupCount());
     assertEquals(streamConfig.getSyncReplicas(), r.getBackupCount());
     assertEquals(streamConfig.getHeapCapacity(), r.getCapacity());

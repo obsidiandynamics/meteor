@@ -12,7 +12,6 @@ import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.obsidiandynamics.await.*;
 import com.obsidiandynamics.func.*;
-import com.obsidiandynamics.meteor.Receiver.*;
 import com.obsidiandynamics.worker.*;
 import com.obsidiandynamics.worker.Terminator;
 import com.obsidiandynamics.zerolog.*;
@@ -85,10 +84,6 @@ public abstract class AbstractPubSubTest {
   
   protected final DefaultSubscriber configureSubscriber(HazelcastInstance instance, SubscriberConfig config) {
     return (DefaultSubscriber) register(Subscriber.createDefault(instance, config), terminables);
-  }
-  
-  protected final Receiver createReceiver(Subscriber subscriber, RecordHandler recordHandler, int pollTimeoutMillis) {
-    return register(subscriber.createReceiver(recordHandler, pollTimeoutMillis), terminables);
   }
   
   protected static final <T> T register(T item, Collection<? super T> container) {

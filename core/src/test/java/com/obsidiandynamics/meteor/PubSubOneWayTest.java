@@ -89,7 +89,7 @@ public final class PubSubOneWayTest extends AbstractPubSubTest {
       
       final HazelcastInstance instance = instancePool.get();
       final Subscriber s = configureSubscriber(instance, subConfig);
-      createReceiver(s, record -> received.incrementAndGet(), pollTimeoutMillis);
+      s.attachReceiver(record -> received.incrementAndGet(), pollTimeoutMillis);
     }
     
     final LongSupplier totalReceived = () -> {

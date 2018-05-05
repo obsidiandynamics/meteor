@@ -40,4 +40,8 @@ public final class DefaultReceiver implements Receiver {
   public boolean join(long timeoutMillis) throws InterruptedException {
     return pollerThread.join(timeoutMillis);
   }
+  
+  WorkerState getThreadState() {
+    return pollerThread.getState();
+  }
 }

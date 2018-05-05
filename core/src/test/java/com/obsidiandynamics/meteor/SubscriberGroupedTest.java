@@ -65,7 +65,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.HAZELQ_META.qualify("offsets." + stream));
+    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.METEOR_META.qualify("offsets." + stream));
 
     final RecordBatch b0 = s.poll(1);
     assertEquals(0, b0.size());
@@ -100,7 +100,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
     
     // start with an existing lease
     final HazelcastInstance instance = newInstance();
-    final IMap<String, byte[]> leases = instance.getMap(Namespace.HAZELQ_META.qualify("lease." + stream));
+    final IMap<String, byte[]> leases = instance.getMap(Namespace.METEOR_META.qualify("lease." + stream));
     leases.put(group, Lease.forever(UUID.randomUUID()).pack());
     final DefaultSubscriber s = 
         configureSubscriber(instance,
@@ -111,7 +111,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
     buffer.add("h0".getBytes());
     buffer.add("h1".getBytes());
     
@@ -160,7 +160,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
     final HazelcastInstance instance = newInstance();
     
     // start with an expired lease -- the new subscriber should take over it
-    final IMap<String, byte[]> leases = instance.getMap(Namespace.HAZELQ_META.qualify("lease." + stream));
+    final IMap<String, byte[]> leases = instance.getMap(Namespace.METEOR_META.qualify("lease." + stream));
     leases.put(group, Lease.expired(UUID.randomUUID()).pack());
 
     final ExceptionHandler eh = mockExceptionHandler();
@@ -174,8 +174,8 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
-    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.HAZELQ_META.qualify("offsets." + stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
+    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.METEOR_META.qualify("offsets." + stream));
     
     // start with the earliest offset
     offsets.put(group, -1L);
@@ -241,7 +241,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
     final HazelcastInstance instance = newInstance();
     
     // start with an expired lease -- the new subscriber should take over it
-    final IMap<String, byte[]> leases = instance.getMap(Namespace.HAZELQ_META.qualify("lease." + stream));
+    final IMap<String, byte[]> leases = instance.getMap(Namespace.METEOR_META.qualify("lease." + stream));
     leases.put(group, Lease.expired(UUID.randomUUID()).pack());
 
     final ExceptionHandler eh = mockExceptionHandler();
@@ -255,8 +255,8 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
-    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.HAZELQ_META.qualify("offsets." + stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
+    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.METEOR_META.qualify("offsets." + stream));
     
     // start with the earliest offset
     offsets.put(group, -1L);
@@ -386,9 +386,9 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final IMap<String, byte[]> leases = s.getInstance().getMap(Namespace.HAZELQ_META.qualify("lease." + stream));
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
-    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.HAZELQ_META.qualify("offsets." + stream));
+    final IMap<String, byte[]> leases = s.getInstance().getMap(Namespace.METEOR_META.qualify("lease." + stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
+    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.METEOR_META.qualify("offsets." + stream));
     offsets.put(group, -1L);
     
     // write some data so that we can read at least one record (otherwise we can't confirm an offset)
@@ -466,9 +466,9 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final IMap<String, byte[]> leases = s.getInstance().getMap(Namespace.HAZELQ_META.qualify("lease." + stream));
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
-    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.HAZELQ_META.qualify("offsets." + stream));
+    final IMap<String, byte[]> leases = s.getInstance().getMap(Namespace.METEOR_META.qualify("lease." + stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
+    final IMap<String, Long> offsets = s.getInstance().getMap(Namespace.METEOR_META.qualify("offsets." + stream));
     offsets.put(group, -1L);
     
     buffer.add("h0".getBytes());
@@ -501,7 +501,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
     final int capacity = 10;
     
     final HazelcastInstance instance = newInstance();
-    final Ringbuffer<byte[]> buffer = instance.getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = instance.getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
     buffer.add("h0".getBytes());
     buffer.add("h1".getBytes());
 
@@ -535,7 +535,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
     final int capacity = 10;
     
     final HazelcastInstance instance = newInstance();
-    final Ringbuffer<byte[]> buffer = instance.getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = instance.getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
     buffer.add("h0".getBytes());
     buffer.add("h1".getBytes());
 
@@ -597,8 +597,8 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
     instancePool.prestartAll();
     final HazelcastInstance instance0 = instancePool.get();
     final HazelcastInstance instance1 = instancePool.get();
-    final Ringbuffer<byte[]> buffer = instance0.getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
-    final IMap<String, Long> offsets = instance0.getMap(Namespace.HAZELQ_META.qualify("offsets." + stream));
+    final Ringbuffer<byte[]> buffer = instance0.getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
+    final IMap<String, Long> offsets = instance0.getMap(Namespace.METEOR_META.qualify("offsets." + stream));
     offsets.put(group, -1L);
     
     final ExceptionHandler eh0 = mockExceptionHandler();
@@ -707,8 +707,8 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
     instancePool.prestartAll();
     final HazelcastInstance instance0 = instancePool.get();
     final HazelcastInstance instance1 = instancePool.get();
-    final Ringbuffer<byte[]> buffer = instance0.getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
-    final IMap<String, Long> offsets = instance0.getMap(Namespace.HAZELQ_META.qualify("offsets." + stream));
+    final Ringbuffer<byte[]> buffer = instance0.getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
+    final IMap<String, Long> offsets = instance0.getMap(Namespace.METEOR_META.qualify("offsets." + stream));
     offsets.put(group0, -1L);
     offsets.put(group1, -1L);
     
@@ -776,8 +776,8 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
     instancePool.prestartAll();
     final HazelcastInstance instance0 = instancePool.get();
     final HazelcastInstance instance1 = instancePool.get();
-    final Ringbuffer<byte[]> buffer0 = instance0.getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream0));
-    final Ringbuffer<byte[]> buffer1 = instance1.getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream1));
+    final Ringbuffer<byte[]> buffer0 = instance0.getRingbuffer(Namespace.METEOR_STREAM.qualify(stream0));
+    final Ringbuffer<byte[]> buffer1 = instance1.getRingbuffer(Namespace.METEOR_STREAM.qualify(stream1));
     
     final ExceptionHandler eh0 = mockExceptionHandler();
     final DefaultSubscriber s0 = 

@@ -21,9 +21,7 @@ public interface Subscriber extends Terminable {
   
   void reactivate();
   
-  default Receiver createReceiver(RecordHandler recordHandler, int pollTimeoutMillis) {
-    return new DefaultReceiver(this, recordHandler, pollTimeoutMillis);
-  }
+  Receiver attachReceiver(RecordHandler recordHandler, int pollTimeoutMillis);
   
   static Subscriber createDefault(HazelcastInstance instance, SubscriberConfig config) {
     return new DefaultSubscriber(instance, config);

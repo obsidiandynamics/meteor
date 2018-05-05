@@ -25,7 +25,7 @@ Message streaming platforms are similar to traditional message queues, but gener
 ### Streams, records and offsets
 A stream is a totally ordered sequence of records, and is fundamental to Meteor. A record has an ID (64-bit integer) and a payload, which is an array of bytes. 'Totally ordered' means that, for any given publisher, records will be written in the order they were emitted. If record _P_ was published before _Q_, then _P_ will precede _Q_ in the stream. Furthermore, they will be read in the same order by all subscribers; _P_ will always be read before _Q_. (Depending on the context, we may sometimes use the term _message_ to refer to a record, as messaging is the dominant use case for Meteor.)
 
-There is no recognised causal ordering _across_ publishers; if two (or more) publishers emit records simultaneously, those records may materialise in arbitrary order. However, this ordering will be observed consistently across all subscribers.
+There is no recognised ordering _across_ publishers; if two (or more) publishers emit records simultaneously, those records may materialise in arbitrary order. However, this ordering will be observed uniformly across all subscribers.
 
 The record offset uniquely identifies a record in the stream, and is used for O(1) lookups. The offset is a strictly monotonically increasing integer in a sparse address space, meaning that each successive offset is always higher than its predecessor and there may be varying gaps between successively assigned offsets. Your application shouldn't try to interpret the offset or guess what the next offset might be; it may, however, infer the relative order of any record pair based on their offsets, sort the records, and so forth.
 
@@ -164,10 +164,10 @@ Gradle builds are hosted on JCenter. Add the following snippet to your build fil
 
 ```groovy
 compile "com.obsidiandynamics.meteor:meteor-core:x.y.z"
-compile "com.hazelcast:hazelcast:3.10-BETA-2"
+compile "com.hazelcast:hazelcast:3.10"
 ```
 
-**Note:** Although Meteor is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with Meteor. This lets you to use any 3.x API-compatible Meteor client library in your application without being constrained by transitive dependencies.
+**Note:** Although Meteor is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with Meteor. This lets you to use any 3.9+ API-compatible Hazelcast client library in your application.
 
 Meteor is packaged as two separate modules:
 
@@ -176,7 +176,7 @@ Meteor is packaged as two separate modules:
 
 ```groovy
 testCompile "com.obsidiandynamics.meteor:meteor-assurance:x.y.z"
-testCompile "com.hazelcast:hazelcast:3.10-BETA-2"
+testCompile "com.hazelcast:hazelcast:3.10"
 ```
 
 ## A pub-sub example
@@ -277,6 +277,50 @@ Scheme          |Ungrouped subscriber behaviour      |Grouped subscriber behavio
 `AUTO`          |Acts as `LATEST`.                   |Acts as `EARLIEST`.
 
 In addition to the initial offset reset scheme, an ungrouped subscriber may be also be repositioned to any offset by calling the `Subscriber.seek(long offset)` method, specifying the new offset. The offset must be in the valid range (between the first and last offsets in the stream), otherwise an error will occur either during a call to `offset()` or later, during a `poll()`.
+
+## Asynchronous subscriber
+The `Subscriber` API presumes that you will dedicate an application thread to continuously invoke `poll()`. Alternatively, Meteor provides an asynchronous wrapper — `Receiver` — a background worker thread that continuously polls an underlying `Subscriber` instance for messages. Example below.
+
+```java
+// set up a Zerolog logger and bridge from Hazelcast's internal logger
+final Zlg zlg = Zlg.forDeclaringClass().get();
+HazelcastZlgBridge.install();
+
+// configure Hazelcast
+final HazelcastProvider provider = GridProvider.getInstance();
+final HazelcastInstance instance = provider.createInstance(new Config());
+
+// the stream config is shared between all publishers and subscribers
+final StreamConfig streamConfig = new StreamConfig().withName("test-stream");
+
+// create a publisher and send a message
+final Publisher publisher = Publisher.createDefault(instance,
+                                                    new PublisherConfig()
+                                                    .withStreamConfig(streamConfig));
+
+publisher.publishAsync(new Record("Hello world".getBytes()));
+
+// create a subscriber for a test group and poll for records
+final Subscriber subscriber = Subscriber.createDefault(instance, 
+                                                       new SubscriberConfig()
+                                                       .withStreamConfig(streamConfig)
+                                                       .withGroup("test-group"));
+// receive records asynchronously; polls every 100 ms
+subscriber.attachReceiver(record -> {
+  zlg.i("Got %s", z -> z.arg(new String(record.getData())));
+  subscriber.confirm();
+}, 100);
+
+// give it some time...
+Threads.sleep(5_000);
+
+// clean up
+publisher.terminate().joinSilently();
+subscriber.terminate().joinSilently();
+instance.shutdown();
+```
+
+**Note:** Once attached, a `Receiver` instance will live alongside its backing `Subscriber`. At most one receiver may be attached; calling `attachReceiver()` a second time will result in an `IllegalStateException`. Terminating the subscriber will result in terminating the attached receiver.
 
 # Use cases
 ## Stream processing

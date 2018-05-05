@@ -46,7 +46,7 @@ public final class PublisherTest extends AbstractPubSubTest {
         configurePublisher(new PublisherConfig().withStreamConfig(new StreamConfig()
                                                                   .withName(stream)
                                                                   .withHeapCapacity(capacity)));
-    final Ringbuffer<byte[]> buffer = p.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = p.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
     final List<Record> records = new ArrayList<>();
     final List<TestCallback> callbacks = new ArrayList<>();
     
@@ -94,7 +94,7 @@ public final class PublisherTest extends AbstractPubSubTest {
                                              .withHeapCapacity(capacity)
                                              .withRingbufferStoreConfig(new RingbufferStoreConfig()
                                                                         .setFactoryClassName(HeapRingbufferStore.Factory.class.getName()))));
-    final Ringbuffer<byte[]> buffer = p.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = p.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
     final List<Record> records = new ArrayList<>();
     final List<TestCallback> callbacks = new ArrayList<>();
 
@@ -135,7 +135,7 @@ public final class PublisherTest extends AbstractPubSubTest {
                                              .withHeapCapacity(capacity)
                                              .withRingbufferStoreConfig(new RingbufferStoreConfig()
                                                                         .setFactoryClassName(HeapRingbufferStore.Factory.class.getName()))));
-    final Ringbuffer<byte[]> buffer = p.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = p.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
 
     final long offset0 = p.publishDirect(new Record("h0".getBytes()));
     assertEquals(0, offset0);

@@ -6,6 +6,7 @@ import java.util.concurrent.*;
 import com.hazelcast.core.*;
 import com.hazelcast.ringbuffer.*;
 import com.obsidiandynamics.func.*;
+import com.obsidiandynamics.meteor.Receiver.*;
 import com.obsidiandynamics.meteor.util.*;
 import com.obsidiandynamics.retry.*;
 import com.obsidiandynamics.worker.*;
@@ -48,6 +49,8 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   private boolean active = true;
   
   private final Object activeLock = new Object();
+  
+  private volatile Receiver receiver;
   
   DefaultSubscriber(HazelcastInstance instance, SubscriberConfig config) {
     this.instance = instance;
@@ -349,12 +352,22 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   }
 
   @Override
+  public Receiver attachReceiver(RecordHandler recordHandler, int pollTimeoutMillis) {
+    if (receiver != null) {
+      throw new IllegalStateException("A receiver has already been attached");
+    }
+    
+    return receiver = new DefaultReceiver(this, recordHandler, pollTimeoutMillis);
+  }
+
+  @Override
   public Joinable terminate() {
     if (leaseCandidate != null) {
       deactivate(ExceptionHandler.nop());
     }
     
     Terminator.blank()
+    .add(Optional.ofNullable(receiver))
     .add(Optional.ofNullable(keeperThread))
     .add(Optional.ofNullable(election))
     .terminate();
@@ -364,6 +377,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   @Override
   public boolean join(long timeoutMillis) throws InterruptedException {
     return Joiner.blank()
+    .add(Optional.ofNullable(receiver))
     .add(Optional.ofNullable(keeperThread))
     .add(Optional.ofNullable(election))
     .join(timeoutMillis);

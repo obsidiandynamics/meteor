@@ -99,13 +99,13 @@ public final class PubSubRoundTripTest extends AbstractPubSubTest {
         .withElectionConfig(new ElectionConfig().withScavengeInterval(1))
         .withStreamConfig(replyStreamConfig);
     
-    createReceiver(configureSubscriber(instancePool.get(), requestSubConfig), record -> {
+    configureSubscriber(instancePool.get(), requestSubConfig).attachReceiver(record -> {
       publishMechanic.go(replyPub, record);
     }, pollTimeoutMillis);
     
     final AtomicInteger received = new AtomicInteger();
     final Histogram hist = new Histogram(NANOSECONDS.toNanos(10), SECONDS.toNanos(10), 5);
-    createReceiver(configureSubscriber(instancePool.get(), replySubConfig), record -> {
+    configureSubscriber(instancePool.get(), replySubConfig).attachReceiver(record -> {
       final SimpleLongMessage m = SimpleLongMessage.unpack(record.getData());
       final long latency = System.nanoTime() - m.value;
       hist.recordValue(latency);

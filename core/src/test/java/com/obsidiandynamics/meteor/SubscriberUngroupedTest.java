@@ -16,6 +16,7 @@ import com.hazelcast.util.executor.*;
 import com.obsidiandynamics.func.*;
 import com.obsidiandynamics.junit.*;
 import com.obsidiandynamics.meteor.Receiver.*;
+import com.obsidiandynamics.worker.*;
 
 @RunWith(Parameterized.class)
 public final class SubscriberUngroupedTest extends AbstractPubSubTest {
@@ -115,7 +116,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
 
     buffer.add("hello".getBytes());
 
@@ -146,7 +147,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
 
     buffer.add("h0".getBytes());
     buffer.add("h1".getBytes());
@@ -180,7 +181,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
     
     buffer.add("h0".getBytes());
     buffer.add("h1".getBytes());
@@ -294,7 +295,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
                             .withStreamConfig(new StreamConfig()
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
 
     buffer.add("h0".getBytes());
     buffer.add("h1".getBytes());
@@ -315,7 +316,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
     final int capacity = 10;
 
     final HazelcastInstance instance = newInstance();
-    final Ringbuffer<byte[]> buffer = instance.getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = instance.getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
     buffer.add("h0".getBytes());
     buffer.add("h1".getBytes());
 
@@ -346,7 +347,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
     final int capacity = 10;
     
     final HazelcastInstance instance = newInstance();
-    final Ringbuffer<byte[]> buffer = instance.getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = instance.getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
     buffer.add("h0".getBytes());
     buffer.add("h1".getBytes());
 
@@ -400,9 +401,9 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
                                               .withName(stream)
                                               .withHeapCapacity(capacity)));
     final RecordHandler handler = mock(RecordHandler.class);
-    createReceiver(s, handler, 1_000);
+    final Receiver receiver = s.attachReceiver(handler, 1_000);
     
-    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.HAZELQ_STREAM.qualify(stream));
+    final Ringbuffer<byte[]> buffer = s.getInstance().getRingbuffer(Namespace.METEOR_STREAM.qualify(stream));
     
     buffer.add("h0".getBytes());
     buffer.add("h1".getBytes());
@@ -413,5 +414,30 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
       } catch (InterruptedException e) {}
     });
     verifyNoError(eh);
+    
+    s.terminate().joinSilently();
+    
+    assertEquals(WorkerState.TERMINATED, ((DefaultReceiver) receiver).getThreadState());
+  }
+  
+  /**
+   *  Tests attaching a receiver a second time, which should fail as there can be at
+   *  most one receiver.
+   */
+  @Test(expected=IllegalStateException.class)
+  public void testReceiverDuplicateAttach() {
+    final String stream = "s";
+    final int capacity = 10;
+
+    final ExceptionHandler eh = mockExceptionHandler();
+    final DefaultSubscriber s =
+        configureSubscriber(new SubscriberConfig()
+                            .withExceptionHandler(eh)
+                            .withStreamConfig(new StreamConfig()
+                                              .withName(stream)
+                                              .withHeapCapacity(capacity)));
+    final RecordHandler handler = mock(RecordHandler.class);
+    s.attachReceiver(handler, 1_000);
+    s.attachReceiver(handler, 1_000);
   }
 }

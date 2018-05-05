@@ -14,7 +14,7 @@ final class StreamHelper {
   private StreamHelper() {}
 
   static Ringbuffer<byte[]> getRingbuffer(HazelcastInstance instance, StreamConfig streamConfig) {
-    final String streamFQName = Namespace.HAZELQ_STREAM.qualify(streamConfig.getName());
+    final String streamFQName = Namespace.METEOR_STREAM.qualify(streamConfig.getName());
     final RingbufferConfig ringbufferConfig = new RingbufferConfig(streamFQName)
         .setBackupCount(streamConfig.getSyncReplicas())
         .setAsyncBackupCount(streamConfig.getAsyncReplicas())
@@ -26,13 +26,13 @@ final class StreamHelper {
 
   static IMap<String, byte[]> getLeaseMap(HazelcastInstance instance, StreamConfig streamConfig, 
                                           MapStoreConfig mapStoreConfig) {
-    return getMap(instance, Namespace.HAZELQ_META.qualify("lease." + streamConfig.getName()),
+    return getMap(instance, Namespace.METEOR_META.qualify("lease." + streamConfig.getName()),
                   streamConfig, mapStoreConfig);
   }
 
   static IMap<String, Long> getOffsetsMap(HazelcastInstance instance, StreamConfig streamConfig, 
                                           MapStoreConfig mapStoreConfig) {
-    return getMap(instance, Namespace.HAZELQ_META.qualify("offsets." + streamConfig.getName()),
+    return getMap(instance, Namespace.METEOR_META.qualify("offsets." + streamConfig.getName()),
                   streamConfig, mapStoreConfig);
   }
 

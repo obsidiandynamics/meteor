@@ -75,7 +75,7 @@ public final class PubSubTest extends AbstractPubSubTest {
     for (int i = 0; i < numReceivers; i++) {
       final HazelcastInstance instance = instancePool.get();
       final Subscriber s = configureSubscriber(instance, subConfig);
-      createReceiver(s, register(new TestHandler(), handlers), 10);
+      s.attachReceiver(register(new TestHandler(), handlers), 10);
     }
     
     // create a publisher and publish the messages
