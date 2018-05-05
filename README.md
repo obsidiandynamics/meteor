@@ -7,7 +7,7 @@ Real-time message streaming over Hazelcast IMDG.
 [![codecov](https://codecov.io/gh/obsidiandynamics/meteor/branch/master/graph/badge.svg)](https://codecov.io/gh/obsidiandynamics/meteor)
 
 # What is Meteor
-**TL;DR** — Meteor is a broker-less, lightweight embeddable alternative to Kafka/Kinesis that runs in an In-Memory Data Grid.
+**TL;DR** — Meteor is a broker-less, lightweight embeddable alternative to Kafka/Kinesis that runs in an in-memory data grid.
 
 ## History
 Meteor started out as a part of Blackstrom — a research project into ultra-fast transactional mesh fabric technology for distributed micro-service and event-driven architectures. Blackstrom originally relied on Kafka, but we longed for a more lightweight distributed ledger for testing, simulation and small-scale deployments. It had to have a **zero deployment footprint** (no brokers or other middleware), be reasonably performant, reliable and highly available. We wanted Kafka, but without the brokers.
