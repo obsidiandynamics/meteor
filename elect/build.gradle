@@ -1,4 +1,4 @@
-def packageName = "hazelq-elect"
+def packageName = "meteor-elect"
 version = project(":").version
 
 dependencies {
@@ -6,7 +6,7 @@ dependencies {
   compile "org.apache.commons:commons-lang3:3.7"
   
   testCompile project(":")
-  testCompile project(":hazelq-assurance")
+  testCompile project(":meteor-assurance")
 }
 
 jar {
@@ -51,8 +51,8 @@ publishing {
 
 def envUser = "BINTRAY_USER"
 def envKey = "BINTRAY_KEY"
-def packageDesc = "Leader election subsystem for HazelQ"
-def repoName = "hazelq"
+def packageDesc = "Leader election subsystem for Meteor"
+def repoName = "meteor"
 bintray {
   user = System.getenv(envUser)
   key = System.getenv(envKey)

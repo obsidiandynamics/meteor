@@ -1,20 +1,20 @@
-def packageName = "hazelq-core"
+def packageName = "meteor-core"
 version = project(":").version
 
 dependencies {
-  compile project(":hazelq-elect")
+  compile project(":meteor-elect")
   compile "com.obsidiandynamics.fulcrum:fulcrum-node-queue:${fulcrumVersion}"
   
   testCompile project(":")
-  testCompile project(":hazelq-assurance")
+  testCompile project(":meteor-assurance")
   testCompile "com.obsidiandynamics.fulcrum:fulcrum-testmark:${fulcrumVersion}"
   testCompile "org.hdrhistogram:HdrHistogram:2.1.10"
 }
 
 task addLauncherApps() {
   project(":").launcherClasspath += sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
-  project(":").launcherClasses += "com.obsidiandynamics.hazelq.PubSubOneWayTest"
-  project(":").launcherClasses += "com.obsidiandynamics.hazelq.PubSubRoundTripTest"
+  project(":").launcherClasses += "com.obsidiandynamics.meteor.PubSubOneWayTest"
+  project(":").launcherClasses += "com.obsidiandynamics.meteor.PubSubRoundTripTest"
 }
 
 jar {
@@ -59,8 +59,8 @@ publishing {
 
 def envUser = "BINTRAY_USER"
 def envKey = "BINTRAY_KEY"
-def packageDesc = "Message streaming over Hazelcast IMDG"
-def repoName = "hazelq"
+def packageDesc = "Real-time message streaming over Hazelcast IMDG"
+def repoName = "meteor"
 bintray {
   user = System.getenv(envUser)
   key = System.getenv(envKey)

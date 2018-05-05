@@ -1,20 +1,20 @@
-<img src="https://raw.githubusercontent.com/wiki/obsidiandynamics/hazelq/images/hazelq-logo.png" width="90px" alt="logo"/> HazelQ
+<img src="https://raw.githubusercontent.com/wiki/obsidiandynamics/meteor/images/meteor-logo.png" width="90px" alt="logo"/> Meteor
 ===
 Real-time message streaming over Hazelcast IMDG.
 
-[![Download](https://api.bintray.com/packages/obsidiandynamics/hazelq/hazelq-core/images/download.svg) ](https://bintray.com/obsidiandynamics/hazelq/hazelq-core/_latestVersion)
-[![Build](https://travis-ci.org/obsidiandynamics/hazelq.svg?branch=master) ](https://travis-ci.org/obsidiandynamics/hazelq#)
-[![codecov](https://codecov.io/gh/obsidiandynamics/hazelq/branch/master/graph/badge.svg)](https://codecov.io/gh/obsidiandynamics/hazelq)
+[![Download](https://api.bintray.com/packages/obsidiandynamics/meteor/meteor-core/images/download.svg) ](https://bintray.com/obsidiandynamics/meteor/meteor-core/_latestVersion)
+[![Build](https://travis-ci.org/obsidiandynamics/meteor.svg?branch=master) ](https://travis-ci.org/obsidiandynamics/meteor#)
+[![codecov](https://codecov.io/gh/obsidiandynamics/meteor/branch/master/graph/badge.svg)](https://codecov.io/gh/obsidiandynamics/meteor)
 
-# What is HazelQ
-**TL;DR** — HazelQ is a broker-less, lightweight embeddable version of Kafka that runs in an In-Memory Data Grid.
+# What is Meteor
+**TL;DR** — Meteor is a broker-less, lightweight embeddable version of Kafka that runs in an In-Memory Data Grid.
 
 ## History
-HazelQ started out as a part of Blackstrom — a research project into ultra-fast transactional mesh fabric technology for distributed micro-service and event-driven architectures. Blackstrom originally relied on Kafka, but we longed for a more lightweight distributed ledger for testing, simulation and small-scale deployments. It had to have a **zero deployment footprint** (no brokers or other middleware), be reasonably performant, reliable and highly available. We wanted Kafka, but without the brokers.
+Meteor started out as a part of Blackstrom — a research project into ultra-fast transactional mesh fabric technology for distributed micro-service and event-driven architectures. Blackstrom originally relied on Kafka, but we longed for a more lightweight distributed ledger for testing, simulation and small-scale deployments. It had to have a **zero deployment footprint** (no brokers or other middleware), be reasonably performant, reliable and highly available. We wanted Kafka, but without the brokers.
 
-To that point, HazelQ wasn't designed to be a 'better Kafka', but rather an alternative streaming platform that has its own merits and may be a better fit in certain contexts.
+To that point, Meteor wasn't designed to be a 'better Kafka', but rather an alternative streaming platform that has its own merits and may be a better fit in certain contexts.
 
-HazelQ showed lots of potential early in its journey, surpassing all expectations in terms of performance and scalability. Eventually it got broken off into a separate project, and so here we are.
+Meteor showed lots of potential early in its journey, surpassing all expectations in terms of performance and scalability. Eventually it got broken off into a separate project, and so here we are.
 
 ## Fundamentals
 ### Real-time message streaming
@@ -23,7 +23,7 @@ The purpose of a real-time message streaming platform is to enable very high-vol
 Message streaming platforms are similar to traditional message queues, but generally offer stronger temporal guarantees. Whereas messages in an MQ tend to be arbitrarily ordered and generally independent of one another, messages in a stream tend to be strongly ordered, often chronologically or causally. Also, a stream persists its messages, whereas an MQ will discard a message once it's been read. For this reason, message streaming tends to be a better fit for implementing Event-Driven Architectures, encompassing event sourcing, eventual consistency and CQRS concepts.
 
 ### Streams, records and offsets
-A stream is a totally ordered sequence of records, and is fundamental to HazelQ. A record has an ID (64-bit integer) and a payload, which is an array of bytes. 'Totally ordered' means that, for any given publisher, records will be written in the order they were emitted. If record _P_ was published before _Q_, then _P_ will precede _Q_ in the stream. Furthermore, they will be read in the same order by all subscribers; _P_ will always be read before _Q_. (Depending on the context, we may sometimes use the term _message_ to refer to a record, as messaging is the dominant use case for HazelQ.)
+A stream is a totally ordered sequence of records, and is fundamental to Meteor. A record has an ID (64-bit integer) and a payload, which is an array of bytes. 'Totally ordered' means that, for any given publisher, records will be written in the order they were emitted. If record _P_ was published before _Q_, then _P_ will precede _Q_ in the stream. Furthermore, they will be read in the same order by all subscribers; _P_ will always be read before _Q_. (Depending on the context, we may sometimes use the term _message_ to refer to a record, as messaging is the dominant use case for Meteor.)
 
 There is no recognised causal ordering _across_ publishers; if two (or more) publishers emit records simultaneously, those records may materialise in arbitrary order. However, this ordering will be observed consistently across all subscribers.
 
@@ -147,35 +147,35 @@ The relationship between publishers, streams and subscribers is depicted below.
 The subscriber group is a somewhat understated concept that's pivotal to the versatility of a message streaming platform. By simply varying the affinity of subscribers with their groups, one can arrive at vastly different distribution topologies — from a topic-like, pub-sub behaviour to an MQ-style, point-to-point model. And crucially, because messages are never truly consumed (the advancing offset only creates the illusion of consumption), one can superimpose disparate distribution topologies over a single message stream.
 
 ### At-least-once delivery and exactly-once processing
-HazelQ takes a prudent approach to data integrity — providing at-least-once message delivery guarantees. If a subscriber within a group is unable to completely process a message (for example, if it crashes midstream), the last message along with any other unconfirmed messages will be redelivered to another subscriber within the same group. This is why it's so important for a subscriber to only confirm an offset when it has completely dealt with the message, not before.
+Meteor takes a prudent approach to data integrity — providing at-least-once message delivery guarantees. If a subscriber within a group is unable to completely process a message (for example, if it crashes midstream), the last message along with any other unconfirmed messages will be redelivered to another subscriber within the same group. This is why it's so important for a subscriber to only confirm an offset when it has completely dealt with the message, not before.
 
 At-least-once semantics do carry a caveat: under some circumstances it may be possible for your application to read the same message repeatedly, even if it had already dealt with the message. For example, you may have dealt with the message but crashed just before confirming it. When a new subscriber takes over the stream, it will replay messages from the last confirmed checkpoint. Alternatively, a message may have been confirmed and another subscriber in the group took over the stream, but due to the asynchronous nature of confirmations the new subscriber will replay from the point of the last received confirmation.
 
 **Subscribers in message streaming applications must be idempotent.** In other words, processing the same record repeatedly should have no net effect on the subscriber ecosystem. If a record has no _additive_ effects, the subscriber is inherently idempotent. (For example, if the subscriber simply overwrites an existing database entry with a new one, then the update is idempotent.) Otherwise, the subscriber must check whether a record has already been processed, and to what extent, prior to processing a record. _The combination of at-least-once delivery and subscriber idempotence leads to exactly-once semantics._
 
 ### Stream capacity
-HazelQ stores the records in a distributed ring buffer within the IMDG — each stream corresponds to one Hazelcast ring buffer. The ring buffer has a configurable, albeit a finite capacity; when the capacity is exhausted, the oldest records will be overwritten. The subscriber API doesn't expose the ring topology; you just see an ordered list of records that gets truncated from the tail end when the buffer is at capacity. The default stream capacity is 10,000 records; this can be overridden via the `StreamConfig` class.
+Meteor stores the records in a distributed ring buffer within the IMDG — each stream corresponds to one Hazelcast ring buffer. The ring buffer has a configurable, albeit a finite capacity; when the capacity is exhausted, the oldest records will be overwritten. The subscriber API doesn't expose the ring topology; you just see an ordered list of records that gets truncated from the tail end when the buffer is at capacity. The default stream capacity is 10,000 records; this can be overridden via the `StreamConfig` class.
 
-HazelQ lets you access historical records beyond the buffer's capacity by providing a custom `RingbufferStore` implementation via `StreamConfig`.
+Meteor lets you access historical records beyond the buffer's capacity by providing a custom `RingbufferStore` implementation via `StreamConfig`.
 
 # Getting Started
 ## Dependencies
 Gradle builds are hosted on JCenter. Add the following snippet to your build file, replacing `x.y.z` with the version shown on the Download badge at the top of this README.
 
 ```groovy
-compile "com.obsidiandynamics.hazelq:hazelq-core:x.y.z"
+compile "com.obsidiandynamics.meteor:meteor-core:x.y.z"
 compile "com.hazelcast:hazelcast:3.10-BETA-2"
 ```
 
-**Note:** Although HazelQ is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with HazelQ. This lets you to use any 3.x API-compatible HazelQ client library in your application without being constrained by transitive dependencies.
+**Note:** Although Meteor is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with Meteor. This lets you to use any 3.x API-compatible Meteor client library in your application without being constrained by transitive dependencies.
 
-HazelQ is packaged as two separate modules:
+Meteor is packaged as two separate modules:
 
-1. `hazelq-core` — The HazelQ implementation. This is the only module you need in production.
-2. `hazelq-assurance` — Mocking components and test utilities. Normally, this module would only be used during testing and should be declared in the `testCompile` configuration. See below.
+1. `meteor-core` — The Meteor implementation. This is the only module you need in production.
+2. `meteor-assurance` — Mocking components and test utilities. Normally, this module would only be used during testing and should be declared in the `testCompile` configuration. See below.
 
 ```groovy
-testCompile "com.obsidiandynamics.hazelq:hazelq-assurance:x.y.z"
+testCompile "com.obsidiandynamics.meteor:meteor-assurance:x.y.z"
 testCompile "com.hazelcast:hazelcast:3.10-BETA-2"
 ```
 
@@ -226,16 +226,16 @@ instance.shutdown();
 
 Some things to note:
 
-* If your application is already using Hazelcast, you should recycle the same `HazelcastInstance` for HazelQ as you use elsewhere in your process. (Unless you wish to bulkhead the two for whatever reason.) Otherwise, you can create a new instance as in the above example.
-* The `publishAsync()` method is non-blocking, returning a `CompletableFuture` that is assigned the record's offset. Alternatively, you can call an overloaded version, providing a `PublishCallback` to be notified when the record was actually sent, or if an error occurred. Most things in HazelQ are done asynchronously.
+* If your application is already using Hazelcast, you should recycle the same `HazelcastInstance` for Meteor as you use elsewhere in your process. (Unless you wish to bulkhead the two for whatever reason.) Otherwise, you can create a new instance as in the above example.
+* The `publishAsync()` method is non-blocking, returning a `CompletableFuture` that is assigned the record's offset. Alternatively, you can call an overloaded version, providing a `PublishCallback` to be notified when the record was actually sent, or if an error occurred. Most things in Meteor are done asynchronously.
 * The `StreamConfig` objects _must_ be identical among all publishers and subscribers. The stream capacity, number of sync/async replicas, persistence configuration and so forth, must be agreed upon in advance by all parties.
 * Calling `withGroup()` on the `SubscriberConfig` assigns a subscriber group, meaning that only one subscriber will be allowed to pull messages off the stream (others will hold back). We refer to this type as a **grouped subscriber**.
 * A grouped subscriber can (and should) persist its offset on the grid by calling `confirm()`, allowing other subscribers to take over from the point of failure. This has the effect of advancing the group's read offset to the last offset successfully read by the sole active subscriber. Alternatively, a subscriber can call `confirm(long)`, passing in a specific offset.  
-* Polling with `Subscriber.poll()` returns a (possibly empty) batch of records. The timeout is in milliseconds (consistently throughout HazelQ) and sets the upper bound on the blocking time. If there are accumulated records in the buffer prior to calling `poll()`, then the latter will return without further blocking.
+* Polling with `Subscriber.poll()` returns a (possibly empty) batch of records. The timeout is in milliseconds (consistently throughout Meteor) and sets the upper bound on the blocking time. If there are accumulated records in the buffer prior to calling `poll()`, then the latter will return without further blocking.
 * Clean up the publisher and subscriber instances by calling `terminate().joinSilently()`. This both instructs it to stop and subsequently awaits its termination.
 
 ## Logging
-We use [Zerolog](https://github.com/obsidiandynamics/zerolog) (Zlg) within HazelQ and also in our examples for low-overhead logging. While it's completely optional, Zlg works well with SLF4J and is optimised for performance-intensive applications. To install the Zlg bridge, either invoke `HazelcastZlgBridge.install()` at the start of your application (before you obtain a Hazelcast instance), or set the system property `hazelcast.logging.class` to `com.obsidiandynamics.zerolog.ZlgFactory`.
+We use [Zerolog](https://github.com/obsidiandynamics/zerolog) (Zlg) within Meteor and also in our examples for low-overhead logging. While it's completely optional, Zlg works well with SLF4J and is optimised for performance-intensive applications. To install the Zlg bridge, either invoke `HazelcastZlgBridge.install()` at the start of your application (before you obtain a Hazelcast instance), or set the system property `hazelcast.logging.class` to `com.obsidiandynamics.zerolog.ZlgFactory`.
 
 For SLF4J users, an added advantage of bridging to Zlg is that it preserves call site (class/method/line) location information for all logs that come out of Hazelcast. The SLF4J binding that's bundled Hazelcast is rather simplistic, forwarding minimal information to SLF4J. The Zlg-based binding is a comprehensive implementation, supporting SLFJ4's location-aware logging API.
 
@@ -250,7 +250,7 @@ Replace the version in the snippet with the version on the Zlg download badge.
 [![Download](https://api.bintray.com/packages/obsidiandynamics/zerolog/zerolog-core/images/download.svg) ](https://bintray.com/obsidiandynamics/zerolog/zerolog-core/_latestVersion)
 
 ## Working with byte arrays
-We want to keep to a light feature set until the project matures to a production-grade system. For the time being, there is no concept of object (de)serialization built into HazelQ; instead records deal directly with byte arrays. While it means you have to push your own bytes around, it gives you the most flexibility with the choice of serialization frameworks. In practice, all serializers convert between objects and either character or byte streams, so plugging in a serializer is a trivial matter.
+We want to keep to a light feature set until the project matures to a production-grade system. For the time being, there is no concept of object (de)serialization built into Meteor; instead records deal directly with byte arrays. While it means you have to push your own bytes around, it gives you the most flexibility with the choice of serialization frameworks. In practice, all serializers convert between objects and either character or byte streams, so plugging in a serializer is a trivial matter.
 
 **Note:** Future iterations may include a mechanism for serializing objects and, crucially, _pipelining_ — where (de)serialization is performed in a different thread to the rest of the application, thereby capitalising on multi-core CPUs.
 
@@ -258,7 +258,7 @@ We want to keep to a light feature set until the project matures to a production
 `HazelcastProvider` is an abstract factory for obtaining `HazelcastInstance` objects with varying behaviour. Its use is completely optional — if you are already accustomed to using a `HazelcastInstanceFactory`, you may continue to do so. The real advantage is that it allows for dependency inversion — decoupling your application from the physical grid. Presently, there are two implementations:
 
 * `GridProvider` is a factory for `HazelcastInstance` instances that connect to a real grid. The instances produced are the same as those made by `HazelcastInstanceFactory`.
-* `TestProvider` is a factory for connecting to a virtual 'test' grid; one which is simulated internally and doesn't leave the confines of the JVM. `TestProvider` requires the `hazelq-assurance` module on the classpath.
+* `TestProvider` is a factory for connecting to a virtual 'test' grid; one which is simulated internally and doesn't leave the confines of the JVM. `TestProvider` requires the `meteor-assurance` module on the classpath.
 
 ## Initial offset scheme
 When a subscriber attaches to a stream for the first time, it needs an initial offset to start consuming from. This is configured by passing an `InitialSchemeOffset` enum to the `SubscriberConfig`, as shown in the snippet below.
@@ -287,7 +287,7 @@ In addition to the initial offset reset scheme, an ungrouped subscriber may be a
 // TODO dead letter
 
 # Architecture
-To fully get your head around the design of HazelQ, you need to first understand [Hazelcast and the basics of In-Memory Data Grids](https://hazelcast.com/use-cases/imdg/). In short, an IMDG pools the memory heap of multiple processes across different machines, creating the illusion of a massive computer comprising lots of cooperating processes, with the combined computational (RAM & CPU) resources. An IMDG is inherently elastic; processes are free to join and leave the grid at any time. The underlying data is sharded for performance and replicated across multiple processes for availability, and can be optionally persisted for durability.
+To fully get your head around the design of Meteor, you need to first understand [Hazelcast and the basics of In-Memory Data Grids](https://hazelcast.com/use-cases/imdg/). In short, an IMDG pools the memory heap of multiple processes across different machines, creating the illusion of a massive computer comprising lots of cooperating processes, with the combined computational (RAM & CPU) resources. An IMDG is inherently elastic; processes are free to join and leave the grid at any time. The underlying data is sharded for performance and replicated across multiple processes for availability, and can be optionally persisted for durability.
 
 The schematic below outlines the key architectural concepts. 
 
@@ -296,7 +296,7 @@ The schematic below outlines the key architectural concepts.
      |  JVM process  |    |  JVM process  |    |  JVM process  |    |  JVM process  |
      |               |    |               |    |               |    |               |
 +----+---------------+----+---------------+----+---------------+----+---------------+----+
-|  HAZELQ SERVICE                      << streams >>                                     |
+|  METEOR SERVICE                      << streams >>                                     |
 +----------------------------------------------------------------------------------------+
 |  HAZELCAST IMDG                                                                        |
 +----+---------------+----+---------------+----+---------------+----+---------------+----+
@@ -306,18 +306,18 @@ The schematic below outlines the key architectural concepts.
      +---------------+    +---------------+    +---------------+    +---------------+
 ```
 
-The HazelQ architecture comprises just two major layers. The bottom layer is plain Hazelcast, providing foundational grid services and basic distributed data structures — hash maps, ring buffers, and so on. HazelQ has no awareness of your physical grid topology, network security, addressing or discovery — it relies on being handed an appropriately configured `HazelcastInstance`. If your application already utilises Hazelcast, you would typically reuse the same `HazelcastInstance`.
+The Meteor architecture comprises just two major layers. The bottom layer is plain Hazelcast, providing foundational grid services and basic distributed data structures — hash maps, ring buffers, and so on. Meteor has no awareness of your physical grid topology, network security, addressing or discovery — it relies on being handed an appropriately configured `HazelcastInstance`. If your application already utilises Hazelcast, you would typically reuse the same `HazelcastInstance`.
 
-The HazelQ service layer is further composed of two notional sub-layers:
+The Meteor service layer is further composed of two notional sub-layers:
 
 1. The **client layer** exposes high-level `Publisher` and `Subscriber` APIs to the application, a data model as well as a set of configuration objects. This is the façade that your application interacts with for publishing and subscribing to streams.
 2. The **protocol layer** encompasses low-level capabilities required to operate a distributed message bus. This includes such aspects as leader election for managing subscriber group assignments, group offset tracking, load balancing, subscriber health monitoring and response, batching, data compression and record versioning. This layer is quite complex and is intentionally abstracted from your application by the client layer.
 
-The relationship between your application code, HazelQ and Hazelcast is depicted below.
+The relationship between your application code, Meteor and Hazelcast is depicted below.
 
 ```
 +------------------------------------------------------------------------------+                                     
-|                              pub-sub Application                             | <= application layer
+|                              Pub-Sub Application                             | <= application layer
 +------------------------------------------------------------------------------+ 
                                        V
 +------------------------------------------------------------------------------+
@@ -333,7 +333,7 @@ The relationship between your application code, HazelQ and Hazelcast is depicted
 +------------------------------------------------------------------------------+ 
 ```
 
-**Note:** Some of the capabilities described above exist only in design and are yet to be implemented. The outstanding capabilities are: record versioning, batching and compression. These should be implemented by the time HazelQ reaches its 1.0.0 release milestone.
+**Note:** Some of the capabilities described above exist only in design and are yet to be implemented. The outstanding capabilities are: record versioning, batching and compression. These should be implemented by the time Meteor reaches its 1.0.0 release milestone.
 
 ## Replicas
 A stream is mapped to a single ring buffer by the protocol layer, which will be mastered by (or lead) a single process node within Hazelcast. The ring buffer's leader is responsible for marshalling all writes to the buffer and serving the read queries. The leader will also optionally replicate writes to replicas, if these are configured in your `StreamConfig`. There are two types of replicas: **sync replicas** and **async replicas**. 
@@ -351,20 +351,20 @@ By contrast, in an IMDG-based architecture, replicas are dynamic processes that 
 
 Further assigning storage responsibilities to replicas is intractable in the dynamic ecosystem of an IMDG. Even with consistent hashing, the amount of data migration would be prohibitive. As such, durability in an IMDG is orthogonal concern; the shard leader will delegate to a centralised storage repository for writing and reading long-term data that may no longer be available in grid memory.
 
-In its present form, HazelQ relies on Hazelcast's `RingbufferStore` to provide unbounded data persistence. This lets you plug in a standard database or a disk-backed cache (such as Redis) into HazelQ. Subscribers will be able to read historical data from a stream, beyond what is accommodated by the underlying ring buffer's capacity. In future iterations, the plan for HazelQ is to offer a turnkey orthogonal persistence engine that is optimised for storing large volumes of log-structured data.
+In its present form, Meteor relies on Hazelcast's `RingbufferStore` to provide unbounded data persistence. This lets you plug in a standard database or a disk-backed cache (such as Redis) into Meteor. Subscribers will be able to read historical data from a stream, beyond what is accommodated by the underlying ring buffer's capacity. In future iterations, the plan for Meteor is to offer a turnkey orthogonal persistence engine that is optimised for storing large volumes of log-structured data.
 
 # Roadmap
 * Lanes within streams: **HIGH PRIORITY**
-  - Currently the biggest limitation of HazelQ, particularly when comparing to Kafka and Kinesis.
+  - Currently the biggest limitation of Meteor, particularly when comparing to Kafka and Kinesis.
   - Currently there's no notion of parallelism within a stream. Under the current model, messages would have to be mapped to multiple streams and there's no (and should never be) load balancing _across_ streams, as streams are meant to be completely unrelated.
   - Need a set of totally ordered message sequences that roll into a single partially ordered stream.
   - Enables parallel stream processing use cases with multi-subscriber load balancing. Paves the way for a fully-fledged message streaming platform.
 * Record versioning and backward compatibility with rolling upgrades: **HIGH PRIORITY**
   - Any changes to the record structure will break older clients when doing a rolling update. This means that the only way of upgrading a grid is to either bring it offline, or to terminate subscribers (which requires bespoke code on the application end).
   - Add a version field to the head of a batch. A publisher always writes to the ring buffer in the latest (from its perspective) version.
-  - Forward compatibility: if a subscriber sees an unsupported message, it will halt processing. Assumingly at some point in the near future the subscriber's JVM is restarted and a new version of HazelQ is loaded. 
+  - Forward compatibility: if a subscriber sees an unsupported message, it will halt processing. Assumingly at some point in the near future the subscriber's JVM is restarted and a new version of Meteor is loaded. 
   - We could even go as far as automatically unsubscribing the subscriber when it sees an unsupported version, causing a rebalancing of subscriber assignments. The lease might bounce around among old subscribers until eventually an upgraded subscriber is elected. (Over the upgrade window, the number of old subscribers should diminish rapidly.)
-  - Backward compatibility: if a subscriber observes a message of an older version, it will apply a series of transforms to stage-wise upgrade the message to the current schema on the fly. As we can't rewrite the messages _in situ_, the HazelQ codebase must retain all schemas and migration rules up to the current version. We could use separate project modules to store version-specific schemas and transforms; the apps can include only those dependencies they need.
+  - Backward compatibility: if a subscriber observes a message of an older version, it will apply a series of transforms to stage-wise upgrade the message to the current schema on the fly. As we can't rewrite the messages _in situ_, the Meteor codebase must retain all schemas and migration rules up to the current version. We could use separate project modules to store version-specific schemas and transforms; the apps can include only those dependencies they need.
   - If persistence is available, then upgrades could be made on data _in situ_ with write-back, thus avoiding the need to retain all schemas and transforms in the codebase. If the subscriber pull a ring buffer cell with a version that is less than N - 1, then it can fetch from the data store instead. The write-back upgrade could be done with older clients still connected to the grid; they would need to halt processing if they encounter a newer schema.
   - Alternatively, we could apply further versioning at the topic level. An upgrade would pump messages from one topic to the next, transforming the messages _en route_. This could be quite complicated in the presence of older publishers, who will continue to publish to the old stream, unless we atomically cut over all publishers (old and new) to the new stream, and support schema N - 1 in the new stream. Also, this approach would interfere with message offsets (although this could be corrected via `RingbufferStore`). We might have to bite the bullet and go with stage-wise upgrades.
   - Versioning only applies to the records' on-wire representation; not to their payload schema. Payload versioning is the application's concern.
@@ -380,7 +380,7 @@ In its present form, HazelQ relies on Hazelcast's `RingbufferStore` to provide u
   - OOTB support for Jackson, Gson, Kryo and `java.io.Serializable`, as well as custom serializers.
   - Serialization will apply to both keys and values; different serializers may be used.
 * Pipelining of client Hazelcast API calls separately from message (de)serialization (using separate threads for I/O and serialization):
-  - Approach is similar to how [Jackdaw](https://github.com/obsidiandynamics/jackdaw) pipelines Kafka I/O and serialization; only the pipelines will be integrated into the HazelQ client API (because we can) and thus made completely transparent to the application.
+  - Approach is similar to how [Jackdaw](https://github.com/obsidiandynamics/jackdaw) pipelines Kafka I/O and serialization; only the pipelines will be integrated into the Meteor client API (because we can) and thus made completely transparent to the application.
 * JMX metrics
 * Auto-confirming of subscriber offsets. Currently this is a manual call to `Subscriber.confirm()`.
 * Metadata server:
@@ -388,7 +388,7 @@ In its present form, HazelQ relies on Hazelcast's `RingbufferStore` to provide u
   - Ideally, publishers and subscribers should refer to stream solely by its name, without concerning themselves with its underlying configuration. Create a stream metedata service that holds a serialized `StreamConfig` (e.g. JSON with YConf mappings) for a given stream name. (A distributed hash map should do.) 
   - The act of looking up the stream's metadata should be separate from the act of connecting to the stream for pub-sub. The lookup operation is done via a separate `MetadataService` API and may take an optional `Supplier<StreamConfig>`, in case the stream doesn't exist.
   - There would ideally be one application responsible for 'mastering' the stream; that application would house the stream config and pass it as the default value. Typically, that application would be one of the publishers. Other applications would perform the lookup without knowledge of the default value; if metadata is missing then the application would either back off or fail (or more pragmatically, fail after some number of back-offs). Perhaps the lookup API could take a timeout value, backing off and retrying behind the scenes.
-  - Being a distributed hash map, the metadata map might itself be created lazily. For this reason, _all_ cohorts must agree on the metadata map configuration. Sensible defaults should be provided by HazelQ, with the option to override.
+  - Being a distributed hash map, the metadata map might itself be created lazily. For this reason, _all_ cohorts must agree on the metadata map configuration. Sensible defaults should be provided by Meteor, with the option to override.
   - Metadata persistence: this wouldn't be an issue for transient (non-persisted topics); however, persisted topics might survive their own metadata if the grid is reformed. The only problem is that there isn't a sensible default persistence configuration for the metadata hash map. The options are to either agree on a global configuration which is dispersed out-of-band, or to apply the `Supplier<MetadataConfig>` pattern and make one 'pilot' process responsible for metadata 'bootstrapping'. If all metadata replicas are lost, the other procs would have to wait for the pilot proc to join the grid. The same pilot proc could also be used to 'master' the streams — acting as a central repository of configuration, which it immediately transfers to the grid. For as long as the grid is intact, the pilot proc is dormant.
   - The pilot is a simple process attached to the grid that can be remotely configured using a Hazelcast topic.
 * Parallel persistence engine:

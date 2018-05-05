@@ -4,7 +4,7 @@ plugins {
 apply plugin: "maven-publish"
 apply plugin: "com.jfrog.bintray"
 
-group = "com.obsidiandynamics.hazelq"
+group = "com.obsidiandynamics.meteor"
 version = "0.6.0-SNAPSHOT"
   
 def envUser = "BINTRAY_USER"
@@ -128,7 +128,7 @@ task jacocoRootReport(type: JacocoReport) {
   }
 }
 
-def packageName = "hazelq-common"
+def packageName = "meteor-common"
 
 dependencies {
   compile "com.obsidiandynamics.fulcrum:fulcrum-retry:${fulcrumVersion}"
@@ -207,7 +207,7 @@ publishing {
 }
 
 def packageDesc = "Common classes and utilities"
-def repoName = "hazelq"
+def repoName = "meteor"
 bintray {
   user = System.getenv(envUser)
   key = System.getenv(envKey)

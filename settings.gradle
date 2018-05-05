@@ -1,10 +1,10 @@
-rootProject.name = "hazelq"
+rootProject.name = "meteor"
 
-include "hazelq-assurance"
-project(":hazelq-assurance").projectDir = new File(settingsDir, "assurance")
+include "meteor-assurance"
+project(":meteor-assurance").projectDir = new File(settingsDir, "assurance")
 
-include "hazelq-core"
-project(":hazelq-core").projectDir = new File(settingsDir, "core")
+include "meteor-core"
+project(":meteor-core").projectDir = new File(settingsDir, "core")
 
-include "hazelq-elect"
-project(":hazelq-elect").projectDir = new File(settingsDir, "elect")
+include "meteor-elect"
+project(":meteor-elect").projectDir = new File(settingsDir, "elect")

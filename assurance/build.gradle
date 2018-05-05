@@ -1,4 +1,4 @@
-def packageName = "hazelq-assurance"
+def packageName = "meteor-assurance"
 version = project(":").version
 
 dependencies {
@@ -48,8 +48,8 @@ publishing {
 
 def envUser = "BINTRAY_USER"
 def envKey = "BINTRAY_KEY"
-def packageDesc = "Mocking components and test utilities for HazelQ"
-def repoName = "hazelq"
+def packageDesc = "Mocking components and test utilities for Meteor"
+def repoName = "meteor"
 bintray {
   user = System.getenv(envUser)
   key = System.getenv(envKey)
