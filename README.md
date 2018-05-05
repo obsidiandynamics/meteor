@@ -391,18 +391,16 @@ A production environment should be configured with at least one sync replica, id
 ## Durability
 In traditional client-server architectures (such as Kafka and Kinesis) the concepts of _availability_ and _durability_ are typically combined. A replica will be statically affiliated with a set of shards and will persist data locally, in stable storage, and will make that data available either for read queries or in the event of a leader failure. It is typically infeasible to move (potentially terabytes of) data from one replica to another.
 
-By contrast, in an IMDG-based architecture, replicas are dynamic processes that join and leave the grid sporadically, and store a limited amount of data in memory. Replicas use consistent hashing in order to balance the shards across the cluster, providing both scalability and availability.
+By contrast, in an IMDG-based architecture, replicas are dynamic processes that join and leave the grid sporadically, and store a limited amount of data in memory. An IMDG employs consistent hashing in order to balance the shards across the cluster and assign replicas, providing both scalability and availability.
 
-Further assigning storage responsibilities to replicas is intractable in the dynamic ecosystem of an IMDG. Even with consistent hashing, the amount of data migration would be prohibitive. As such, durability in an IMDG is orthogonal concern; the shard leader will delegate to a centralised storage repository for writing and reading long-term data that may no longer be available in grid memory.
+Further assigning storage responsibilities to replicas is intractable in the dynamic ecosystem of an IMDG. Even with consistent hashing, the amount of data migration would be prohibitive. As such, durability in an IMDG is an _orthogonal_ concern; the shard leader will delegate to a separate storage repository for writing and reading long-term data that may no longer be available in grid memory. This data store should be discoverable and accessible from all nodes in the grid.
 
 In its present form, Meteor relies on Hazelcast's `RingbufferStore` to provide unbounded data persistence. This lets you plug in a standard database or a disk-backed cache (such as Redis) into Meteor. Subscribers will be able to read historical data from a stream, beyond what is accommodated by the underlying ring buffer's capacity. In future iterations, the plan for Meteor is to offer a turnkey orthogonal persistence engine that is optimised for storing large volumes of log-structured data.
 
 # Roadmap
-* Lanes within streams: **HIGH PRIORITY**
+* Load balancing of subscribers: **HIGH PRIORITY**
   - Currently the biggest limitation of Meteor, particularly when comparing to Kafka and Kinesis.
-  - Currently there's no notion of parallelism within a stream. Under the current model, messages would have to be mapped to multiple streams and there's no (and should never be) load balancing _across_ streams, as streams are meant to be completely unrelated.
-  - Need a set of totally ordered message sequences that roll into a single partially ordered stream.
-  - Enables parallel stream processing use cases with multi-subscriber load balancing. Paves the way for a fully-fledged message streaming platform.
+  - Currently there's no notion of parallelism within a stream or across multiple streams. Under the current model, messages would have to be mapped to multiple streams by publishers; however, due to the absence of load balancing, subscribers may congregate in a relatively few number of nodes (due to the first-come-first-serve stream lease assignment), leaving the cluster underutilised.
 * Record versioning and backward compatibility with rolling upgrades: **HIGH PRIORITY**
   - Any changes to the record structure will break older clients when doing a rolling update. This means that the only way of upgrading a grid is to either bring it offline, or to terminate subscribers (which requires bespoke code on the application end).
   - Add a version field to the head of a batch. A publisher always writes to the ring buffer in the latest (from its perspective) version.
