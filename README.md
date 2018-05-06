@@ -14,13 +14,17 @@ Meteor started out as a part of Blackstrom — a research project into ultra-fas
 
 To that point, Meteor wasn't designed to be a 'better Kafka', but rather an alternative streaming platform that has its own merits and may be a better fit in certain contexts.
 
-Meteor showed lots of potential early in its journey, surpassing all expectations in terms of performance and scalability. Eventually it got broken off into a separate project, and so here we are.
+Meteor showed lots of potential early in its journey, surpassing all expectations in terms of performance and scalability. A benchmark conducted on an [i7-4770 Haswell](https://ark.intel.com/products/75122/Intel-Core-i7-4770-Processor-8M-Cache-up-to-3_90-GHz) CPU with 4 publishers and 16 subscribers has shown aggregate throughput in excess of 4.3 million messages/sec over a single stream, with 100-byte messages. 
+
+Eventually Meteor got broken off into a separate project, and so here we are.
 
 ## Fundamentals
 ### Real-time message streaming
 The purpose of a real-time message streaming platform is to enable very high-volume, low-latency distribution of message-oriented content among distributed processes that are completely decoupled from each other. These process fall into one of two categories: publishers (emitters of message content) and subscribers (consumers of messages).
 
-Message streaming platforms are similar to traditional message queues, but generally offer stronger temporal guarantees. Whereas messages in an MQ tend to be arbitrarily ordered and generally independent of one another, messages in a stream tend to be strongly ordered, often chronologically or causally. Also, a stream persists its messages, whereas an MQ will discard a message once it's been read. For this reason, message streaming tends to be a better fit for implementing Event-Driven Architectures, encompassing event sourcing, eventual consistency and CQRS concepts.
+Message streaming platforms reside in the broader class of Message-oriented Middleware (MoM) and are similar to traditional message queues and topics, but generally offer stronger temporal guarantees. Whereas messages in an MQ tend to be arbitrarily ordered and generally independent of one another, messages in a stream tend to be strongly ordered, often chronologically or causally. Also, a stream persists its messages, whereas an MQ will discard a message once it's been read. For this reason, message streaming tends to be a better fit for implementing Event-Driven Architectures, encompassing event sourcing, eventual consistency and CQRS concepts.
+
+Message streaming platforms are a comparatively recent paradigm within the broader MoM domain. There are only a couple of mainstream implementations available (excluding this one), compared to hundreds of MQ-style brokers, some going back to the 1980s (e.g. Tuxedo). Compared to established standards such as AMQP, MQTT, XMPP and JMS, there are no equivalent standards in the streaming space. Streaming platforms are an active area of continuous research and experimentation. In spite of this, streaming platforms aren't just a niche concept or an academic idea with few esoteric use cases; they can be applied effectively to a broad range of messaging scenarios, routinely displacing their traditional analogues both in flexibility and performance.
 
 ### Streams, records and offsets
 A stream is a totally ordered sequence of records, and is fundamental to Meteor. A record has an ID (64-bit integer) and a payload, which is an array of bytes. 'Totally ordered' means that, for any given publisher, records will be written in the order they were emitted. If record _P_ was published before _Q_, then _P_ will precede _Q_ in the stream. Furthermore, they will be read in the same order by all subscribers; _P_ will always be read before _Q_. (Depending on the context, we may sometimes use the term _message_ to refer to a record, as messaging is the dominant use case for Meteor.)
@@ -323,12 +327,38 @@ instance.shutdown();
 **Note:** Once attached, a `Receiver` instance will live alongside its backing `Subscriber`. At most one receiver may be attached; calling `attachReceiver()` a second time will result in an `IllegalStateException`. Terminating the subscriber will result in terminating the attached receiver.
 
 # Use cases
+The following section compares typical enterprise messaging scenarios, traditionally implemented using MQ and pub-sub middleware, with constructs and patterns native to Meteor.
+
 ## Stream processing
+This is usually the main driver behind adopting a message streaming platform — processing large volumes of contiguous data in real-time. The type of data may be quite diverse, ranging from events, analytics, price quotes, transactions, commands, queries and so forth. 
+
+It's common for streaming data to follow a specific order, which may be _total_ or _partial_. When reasoning about order, it helps to consider pairwise relations. For example, chronological order is total because every conceivable pair of events can be placed in some deterministic order, given sufficient clock resolution. Causal order is partial as only some pairs of events may be deterministically ordered, while others may be arbitrarily ordered. A total order carries stronger information density than partial order.
+
+Meteor streams support total ordering of records and, by extension, partial ordering. Total order is expensive, but occasionally warranted. Totally ordered data usually imposes constraints on the number of subscribers that may process the stream (the subscriber ecosystem is assumably order-dependent and binds via a subscriber group). When dealing with partially ordered data, consider publishing the data across multiple streams, where each stream is totally ordered. This allows for the subscriber ecosystem to process data in parallel; the greater the number of streams, the more subscribers may be used to process the data in parallel.
+
+**Note:** Meteor does not (yet) support subscriber load balancing. So while multiple subscribers across different JVMs may be used to read from several streams in parallel, there is no guarantee that the load will be evenly distributed across the subscriber JVMs.
 
 ## Pub-sub topics
+A pub-sub topic assumes a (multi)point-to-multipoint topology, with multiple interested parties that typically represent disparate applications. Reading from a topic does not result in message consumption (in that it does not affect message visibility), allowing multiple consumers to read the same message from the topic. Consumers are subscribed to the message feed only for as long as they remain connected; a disconnection (however brief) may result in message forfeiture. As such, topics in conventional MoM are often seen as best-effort constructs, providing the highest performance with minimal guarantees; where these are insufficient, queues are used instead.
 
-## Message queue
-// TODO dead letter
+Pub-sub topics are trivially accommodated with Meteor streams. Multiple subscribers connect to a stream without specifying a subscriber group, thereby achieving an unbounded (multi)point-to-multipoint topology. The initial offset scheme is typically set to `LATEST`, which is the default for ungrouped subscribers. The notion of messages not being consumed by any single party and the transient subscription model are natively accommodated by Meteor.
+
+## Message queues
+MQ is considered to be a subset of the stream processing scenario, where there is typically an absence of ordering between messages in the stream. Subscribers connect to the stream with an overarching subscriber group and with the initial offset scheme set to `EARLIEST`, being the default for grouped subscribers.
+
+An MQ typically accommodates multiple concurrent consumers for parallelism, each consuming one message from the queue at a time in arbitrary order (usually round-robin). Because streams are always assumed to be totally ordered, this is not an option in Meteor. As such, and similarly to the stream processing scenario, if subscriber parallelism is required, the publisher should divide the messages into multiple streams.
+
+**Note:** Future versions may allow the subscriber ecosystem to dynamically project (re-map) a totally ordered stream unto multiple partially ordered views and consume from these views in parallel.
+
+Consumer failure is a standard concern in MQ-centric architectures. If a consumer fails during message processing, the in-flight message will eventually time out and will be redelivered to another consumer (or will at least be marked as 'unconsumed'). Meteor uses subscriber groups and subscriber read offset tracking to deal with failures. If a subscriber fail-over occurs, the newly assigned subscriber will resume processing from the last confirmed offset. Meteor subscribers must deal with at-least-once delivery; the same principle applies to MQ consumers.
+
+## Dead-letter queues
+A brief note on dead-letter queues. A DLQ is a higher-order construct often appearing within mainstream MoM implementations as a way of dealing with unprocessable messages and ensuring message flow. The semantics of DLQs, while largely in the same spirit, vary subtly among implementations. The basic premise is that if a consumer is seemingly unable to deal with the message, this is eventually detected by the broker and the message is routed to the DLQ instead. (Often detection is simply based on subscriber timeouts and a fixed number of attempts.)
+
+Meteor (like other streaming platforms) offloads the responsibility for dealing with unprocessable messages to the subscribers. The basic rationale is that a streaming platform serves as an unopinionated, high performance streaming transport between publishers and subscribers, allowing for a variety of topologies to be superimposed, but without unnecessarily constraining either party. A MoM cannot definitively tell whether a message is unprocessable; a subscriber is best-placed to determine this locally and act accordingly. This may include silently dropping the message, logging an error, or republishing the message to an agreed stream — the latter being analogous to a DLQ.
+
+A subscriber should generally err on the side of caution, not placing excessive trust in the quality of published messages, especially when messages originate from a different ecosystem or in low assurance environments. A good practice is to surround the receipt of a record with a `try-catch` block, trapping and logging all exceptions, up to `Throwable`.
+
 
 # Architecture
 To fully get your head around the design of Meteor, you need to first understand [Hazelcast and the basics of In-Memory Data Grids](https://hazelcast.com/use-cases/imdg/). In short, an IMDG pools the memory heap of multiple processes across different machines, creating the illusion of a massive computer comprising lots of cooperating processes, with the combined computational (RAM & CPU) resources. An IMDG is inherently elastic; processes are free to join and leave the grid at any time. The underlying data is sharded for performance and replicated across multiple processes for availability, and can be optionally persisted for durability.
