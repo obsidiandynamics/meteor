@@ -1,5 +1,7 @@
 package com.obsidiandynamics.meteor;
 
+import static com.obsidiandynamics.retry.Retry.*;
+
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -34,6 +36,8 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
   
   private final WorkerThread keeperThread;
   
+  private final int readBatchSize;
+  
   private volatile long nextReadOffset;
   
   private volatile long lastReadOffset;
@@ -58,12 +62,13 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
     
     final StreamConfig streamConfig = config.getStreamConfig();
     final Retry retry = new Retry()
-        .withExceptionClass(HazelcastException.class)
+        .withExceptionMatcher(isA(HazelcastException.class))
         .withAttempts(Integer.MAX_VALUE)
         .withBackoff(100)
         .withFaultHandler(config.getZlg()::w)
         .withErrorHandler(config.getZlg()::e);
     buffer = new RetryableRingbuffer<>(retry, StreamHelper.getRingbuffer(instance, streamConfig));
+    readBatchSize = Math.min(1_000, streamConfig.getHeapCapacity());
     
     if (config.hasGroup()) {
       // checks for IllegalArgumentException; no initial assignment is made until poll() is called
@@ -134,7 +139,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
           lastReadOffset = nextReadOffset - 1;
         }
       
-        final ICompletableFuture<ReadResultSet<byte[]>> f = buffer.readManyAsync(nextReadOffset, 1, 1_000, StreamHelper::isNotNull);
+        final ICompletableFuture<ReadResultSet<byte[]>> f = buffer.readManyAsync(nextReadOffset, 1, readBatchSize, StreamHelper::isNotNull);
         
         final long waitMillis = computeWait(wake, Long.MAX_VALUE);
         try {

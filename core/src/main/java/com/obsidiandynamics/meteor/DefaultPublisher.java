@@ -1,5 +1,7 @@
 package com.obsidiandynamics.meteor;
 
+import static com.obsidiandynamics.retry.Retry.*;
+
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -45,7 +47,7 @@ final class DefaultPublisher implements Publisher, Joinable {
     final StreamConfig streamConfig = config.getStreamConfig();
 
     final Retry retry = new Retry()
-        .withExceptionClass(HazelcastException.class)
+        .withExceptionMatcher(isA(HazelcastException.class))
         .withAttempts(Integer.MAX_VALUE)
         .withBackoff(100)
         .withFaultHandler(config.getZlg()::w)

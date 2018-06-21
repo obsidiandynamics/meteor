@@ -209,10 +209,12 @@ public final class PublisherTest extends AbstractPubSubTest {
    */
   private static List<byte[]> readRemaining(Ringbuffer<byte[]> buffer, long startSequence) throws InterruptedException, ExecutionException {
     long adjStartSequence = startSequence;
+    final List<byte[]> items = new ArrayList<>();
     for (;;) {
       final ReadResultSet<byte[]> results;
       try {
-        results = buffer.readManyAsync(adjStartSequence, 0, 1000, null).get();
+        final int toRead = (int) Math.min(1_000, buffer.capacity());
+        results = buffer.readManyAsync(adjStartSequence, 0, toRead, null).get();
       } catch (ExecutionException e) {
         if (e.getCause() instanceof StaleSequenceException) {
           System.out.format("SSE: fast-forwarding start sequence to %d\n", buffer.headSequence());
@@ -222,9 +224,13 @@ public final class PublisherTest extends AbstractPubSubTest {
           throw e;
         }
       }
-      final List<byte[]> items = new ArrayList<>(results.size());
-      results.forEach(items::add);
-      return items;
+      
+      if (results.size() > 0) {
+        results.forEach(items::add);
+        adjStartSequence += results.size();
+      } else {
+        return items;
+      }
     }
   }
 

@@ -1,5 +1,7 @@
 package com.obsidiandynamics.meteor;
 
+import static com.obsidiandynamics.retry.Retry.*;
+
 import java.util.*;
 
 import com.hazelcast.core.*;
@@ -31,7 +33,7 @@ public final class Election implements Terminable, Joinable {
     this.config = config;
 
     final Retry retry = new Retry()
-        .withExceptionClass(HazelcastException.class)
+        .withExceptionMatcher(isA(HazelcastException.class))
         .withAttempts(Integer.MAX_VALUE)
         .withBackoff(100)
         .withFaultHandler(config.getZlg()::w)

@@ -37,10 +37,10 @@ allprojects {
   }
   
   ext {
-    fulcrumVersion = "0.14.0"
-    yconfVersion = "0.3.1"
-    zerologVersion = "0.14.0"
-    hazelcastVersion = "3.10"
+    fulcrumVersion = "0.15.1"
+    yconfVersion = "0.4.0"
+    zerologVersion = "0.15.0"
+    hazelcastVersion = "3.10.2"
   }
   
   dependencies {
