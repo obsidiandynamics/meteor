@@ -38,10 +38,17 @@ allprojects {
   }
   
   ext {
-    fulcrumVersion = "0.18.0"
-    yconfVersion = "0.8.0"
-    zerologVersion = "0.19.0"
-    hazelcastVersion = "3.10.3"
+    commonsLangVersion = "3.8.1"
+    equalsverifierVersion = "3.0"
+    fulcrumVersion = "0.24.0"
+    hdrhistogramVersion = "2.1.10"
+    junitVersion = "4.12"
+    hazelcastVersion = "3.11"
+    log4jVersion = "1.2.17"
+    mockitoVersion = "2.23.0"
+    slf4jVersion = "1.7.25"
+    yconfVersion = "0.9.0"
+    zerologVersion = "0.20.0"
   }
   
   dependencies {
@@ -53,13 +60,13 @@ allprojects {
     testCompile "com.obsidiandynamics.fulcrum:fulcrum-await:${fulcrumVersion}"
     testCompile "com.obsidiandynamics.fulcrum:fulcrum-junit:${fulcrumVersion}"
     testCompile "com.obsidiandynamics.yconf:yconf-snakeyaml:${yconfVersion}"
-    testCompile "junit:junit:4.12"
-    testCompile "org.mockito:mockito-core:2.19.1"
-    testCompile "nl.jqno.equalsverifier:equalsverifier:2.4.8"
+    testCompile "junit:junit:${junitVersion}"
+    testCompile "org.mockito:mockito-core:${mockitoVersion}"
+    testCompile "nl.jqno.equalsverifier:equalsverifier:${equalsverifierVersion}"
     testRuntime "com.obsidiandynamics.zerolog:zerolog-slf4j17:${zerologVersion}"
-    testRuntime "org.slf4j:slf4j-api:1.7.25"
-    testRuntime "org.slf4j:slf4j-log4j12:1.7.25"
-    testRuntime "log4j:log4j:1.2.17"
+    testRuntime "org.slf4j:slf4j-api:${slf4jVersion}"
+    testRuntime "org.slf4j:slf4j-log4j12:${slf4jVersion}"
+    testRuntime "log4j:log4j:${log4jVersion}"
   }
 
   test {

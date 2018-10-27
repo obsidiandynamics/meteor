@@ -8,7 +8,7 @@ dependencies {
   testCompile project(":")
   testCompile project(":meteor-assurance")
   testCompile "com.obsidiandynamics.fulcrum:fulcrum-testmark:${fulcrumVersion}"
-  testCompile "org.hdrhistogram:HdrHistogram:2.1.10"
+  testCompile "org.hdrhistogram:HdrHistogram:${hdrhistogramVersion}"
 }
 
 task addLauncherApps() {
