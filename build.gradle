@@ -40,15 +40,15 @@ allprojects {
   ext {
     commonsLangVersion = "3.8.1"
     equalsverifierVersion = "3.0"
-    fulcrumVersion = "0.24.0"
+    fulcrumVersion = "0.25.0"
     hdrhistogramVersion = "2.1.10"
     junitVersion = "4.12"
     hazelcastVersion = "3.11"
     log4jVersion = "1.2.17"
     mockitoVersion = "2.23.0"
     slf4jVersion = "1.7.25"
-    yconfVersion = "0.9.0"
-    zerologVersion = "0.20.0"
+    yconfVersion = "0.10.0"
+    zerologVersion = "0.21.0"
   }
   
   dependencies {
