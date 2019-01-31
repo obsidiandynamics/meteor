@@ -1,5 +1,4 @@
 rootProject.name = "meteor"
-enableFeaturePreview('STABLE_PUBLISHING') // Gradle 5.0 forward compatibility testing
 
 include "meteor-assurance"
 project(":meteor-assurance").projectDir = new File(settingsDir, "assurance")

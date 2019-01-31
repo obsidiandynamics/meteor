@@ -21,6 +21,19 @@ task bintrayCredentialsCheck {
   }
 }
 
+def baseJvmArgs = [
+  "--add-opens=java.base/java.io=ALL-UNNAMED",
+  "--add-opens=java.base/java.lang=ALL-UNNAMED",
+  "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
+  "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+  "--add-opens=java.base/java.nio=ALL-UNNAMED",
+  "--add-opens=java.base/java.util=ALL-UNNAMED",
+  "--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED",
+  "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+  "-XX:-MaxFDLimit"
+]
+project.ext.set("baseJvmArgs", baseJvmArgs)
+
 allprojects {
   apply plugin: "java"
   apply plugin: "jacoco"
@@ -68,25 +81,35 @@ allprojects {
     testRuntime "org.slf4j:slf4j-log4j12:${slf4jVersion}"
     testRuntime "log4j:log4j:${log4jVersion}"
   }
+    
+  compileJava {
+    options.compilerArgs += "-proc:none"
+    options.compilerArgs += "-Xlint:unchecked"
+  }
+
+  compileTestJava {
+    options.compilerArgs += "-proc:none"
+    options.compilerArgs += "-Xlint:unchecked"
+  }
+  
+  tasks.withType(JavaCompile) {
+    options.fork = true
+    options.incremental = true
+  }
 
   test {
     exclude "**/*IT.class"
+    jvmArgs += baseJvmArgs
   }
   
   jacoco {
-    toolVersion = "0.8.2"
+    toolVersion = "0.8.3"
   }
   
-  javadoc {
-    if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
-      options.addStringOption("quiet", "-html5")
-    }
-  }
-
   jacocoTestReport {
-    additionalSourceDirs = files(sourceSets.main.allSource.srcDirs)
-    sourceDirectories = files(sourceSets.main.allSource.srcDirs)
-    classDirectories = files(sourceSets.main.output)
+    additionalSourceDirs.from = files(sourceSets.main.allSource.srcDirs)
+    sourceDirectories.from = files(sourceSets.main.allSource.srcDirs)
+    classDirectories.from = files(sourceSets.main.output)
     reports {
       html.enabled true
       xml.enabled true
@@ -108,10 +131,10 @@ subprojects {
 
 task jacocoRootReport(type: JacocoReport) {
   dependsOn = allprojects.test
-  additionalSourceDirs = files(allprojects.sourceSets.main.allSource.srcDirs)
-  sourceDirectories = files(allprojects.sourceSets.main.allSource.srcDirs)
-  classDirectories = files(allprojects.sourceSets.main.output)
-  executionData = files(allprojects.jacocoTestReport.executionData)
+  additionalSourceDirs.from = files(allprojects.sourceSets.main.allSource.srcDirs)
+  sourceDirectories.from = files(allprojects.sourceSets.main.allSource.srcDirs)
+  classDirectories.from = files(allprojects.sourceSets.main.output)
+  executionData.from = files(allprojects.jacocoTestReport.executionData)
   reports {
     html.enabled true
     xml.enabled true
@@ -121,12 +144,12 @@ task jacocoRootReport(type: JacocoReport) {
     true
   }
   doFirst {
-    executionData = files(executionData.findAll {
+    executionData.from = files(executionData.findAll {
       it.exists()
     })
   }
   afterEvaluate {
-    classDirectories = files(classDirectories.files.collect {
+    classDirectories.from = files(classDirectories.files.collect {
       fileTree(dir: it, exclude: ["sample/**", "**/*Uncovered*"])
     })
   }
@@ -140,8 +163,6 @@ dependencies {
   compile "com.obsidiandynamics.yconf:yconf-core:${yconfVersion}"
   compile "com.obsidiandynamics.zerolog:zerolog-core:${zerologVersion}"
   compile "com.obsidiandynamics.zerolog:zerolog-bridge-hazelcast:${zerologVersion}"
-  
-  testRuntime "com.obsidiandynamics.fulcrum:fulcrum-launcher:${fulcrumVersion}"
 }
 
 project.ext.set("launcherClasspath", new org.gradle.api.internal.file.UnionFileCollection())
@@ -150,7 +171,7 @@ project.ext.set("launcherClasses", new ArrayList())
 task addLauncherApps() {
   project(":").launcherClasspath += sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
 }
-
+/*
 task launch() {
   dependsOn allprojects*.tasks*.findByName("testClasses")
   doLast {
@@ -167,7 +188,7 @@ task launch() {
       standardInput = System.in
     }
   }
-}
+}*/
 
 jar {
   baseName packageName

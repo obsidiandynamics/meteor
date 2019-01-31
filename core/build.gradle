@@ -9,12 +9,29 @@ dependencies {
   testCompile project(":meteor-assurance")
   testCompile "com.obsidiandynamics.fulcrum:fulcrum-testmark:${fulcrumVersion}"
   testCompile "org.hdrhistogram:HdrHistogram:${hdrhistogramVersion}"
+  
+  testRuntime "com.obsidiandynamics.fulcrum:fulcrum-launcher:${fulcrumVersion}"
 }
 
-task addLauncherApps() {
-  project(":").launcherClasspath += sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
-  project(":").launcherClasses += "com.obsidiandynamics.meteor.PubSubOneWayTest"
-  project(":").launcherClasses += "com.obsidiandynamics.meteor.PubSubRoundTripTest"
+task launch(dependsOn: testClasses) {
+  doLast {
+    def launcherClasses = new ArrayList()
+    launcherClasses += "com.obsidiandynamics.meteor.PubSubOneWayTest"
+    launcherClasses += "com.obsidiandynamics.meteor.PubSubRoundTripTest"
+    
+    def perfJvmArgs = "-XX:-MaxFDLimit -XX:+TieredCompilation -XX:+UseNUMA -XX:+UseCondCardMark " + 
+                      "-XX:+UseBiasedLocking -Xms2G -Xmx2G -Xss1M -XX:+UseG1GC -XX:MaxGCPauseMillis=200 " + 
+                      "-XX:InitiatingHeapOccupancyPercent=0 -Djava.net.preferIPv4Stack=true " + 
+                      "-Dlauncher.package.compress.level=3"
+    javaexec {
+      systemProperties = System.properties
+      classpath = sourceSets.test.runtimeClasspath
+      main = "com.obsidiandynamics.launcher.Launcher"
+      args = launcherClasses
+      jvmArgs = Arrays.asList(perfJvmArgs.split(" ")) + baseJvmArgs
+      standardInput = System.in
+    }
+  }
 }
 
 jar {
