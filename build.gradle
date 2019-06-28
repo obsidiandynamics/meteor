@@ -60,7 +60,7 @@ allprojects {
     log4jVersion = "1.2.17"
     mockitoVersion = "2.27.0"
     slf4jVersion = "1.7.25"
-    yconfVersion = "0.17.0"
+    yconfVersion = "0.18.0"
     zerologVersion = "0.28.0"
   }
   
