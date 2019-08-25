@@ -275,7 +275,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
           final long timeSinceLastExtend = System.currentTimeMillis() - lastExtendTimestamp;
           if (timeSinceLastExtend >= config.getMinLeaseExtendInterval()) {
             performedWork = true;
-            extendLease(scheduledExtendTimestamp);
+            extendLease();
             lastExtendTimestamp = scheduledExtendTimestamp;
           }
         }
@@ -304,10 +304,10 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
     }
   }
   
-  private void extendLease(long timestamp) {
+  private void extendLease() {
     doWithExceptionHandler(() -> election.extend(config.getGroup(), leaseCandidate), 
-                       config.getExceptionHandler(), 
-                       "Failed to extend lease");
+                           config.getExceptionHandler(), 
+                           "Failed to extend lease");
   }
   
   private boolean isCurrentTenant() {
@@ -331,8 +331,8 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
       election.getRegistry().unenrol(config.getGroup(), leaseCandidate);
       if (isCurrentTenant()) {
         doWithExceptionHandler(() -> election.yield(config.getGroup(), leaseCandidate), 
-                           errorHandler, 
-                           "Failed to yield lease");
+                               errorHandler, 
+                               "Failed to yield lease");
       }
       active = false;
     }
