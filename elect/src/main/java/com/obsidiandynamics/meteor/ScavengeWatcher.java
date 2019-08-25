@@ -1,11 +1,22 @@
 package com.obsidiandynamics.meteor;
 
+import static com.obsidiandynamics.func.Functions.*;
+
 import java.util.*;
 
 interface ScavengeWatcher {
   static ScavengeWatcher nop = new ScavengeWatcher() {
-    @Override public void onExpire(String resource, UUID tenant) {}
-    @Override public void onAssign(String resource, UUID tenant) {}
+    @Override 
+    public void onExpire(String resource, UUID tenant) {
+      mustExist(resource);
+      mustExist(tenant);
+    }
+    
+    @Override 
+    public void onAssign(String resource, UUID tenant) {
+      mustExist(resource);
+      mustExist(tenant);
+    }
   };
   
   static ScavengeWatcher nop() { return nop; }
