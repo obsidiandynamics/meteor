@@ -13,6 +13,7 @@ import com.obsidiandynamics.meteor.util.*;
 import com.obsidiandynamics.retry.*;
 import com.obsidiandynamics.worker.*;
 import com.obsidiandynamics.worker.Terminator;
+import com.obsidiandynamics.zerolog.util.*;
 
 public final class DefaultSubscriber implements Subscriber, Joinable {
   /** Cycle backoff for the keeper thread. */
@@ -86,6 +87,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
       keeperThread = WorkerThread.builder()
           .withOptions(new WorkerOptions().daemon().withName(Subscriber.class, streamConfig.getName(), "keeper"))
           .onCycle(this::keeperCycle)
+          .onUncaughtException(new ZlgWorkerExceptionHandler(config.getZlg()))
           .buildAndStart();
     } else {
       if (config.getInitialOffsetScheme() == InitialOffsetScheme.NONE) {

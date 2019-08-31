@@ -11,6 +11,7 @@ import com.obsidiandynamics.meteor.util.*;
 import com.obsidiandynamics.nodequeue.*;
 import com.obsidiandynamics.retry.*;
 import com.obsidiandynamics.worker.*;
+import com.obsidiandynamics.zerolog.util.*;
 
 final class DefaultPublisher implements Publisher, Joinable {
   private static final int PUBLISH_MAX_YIELDS = 100;
@@ -57,6 +58,7 @@ final class DefaultPublisher implements Publisher, Joinable {
     publishThread = WorkerThread.builder()
         .withOptions(new WorkerOptions().daemon().withName(Publisher.class, streamConfig.getName(), "publisher"))
         .onCycle(this::publisherCycle)
+        .onUncaughtException(new ZlgWorkerExceptionHandler(config.getZlg()))
         .buildAndStart();
   }
   

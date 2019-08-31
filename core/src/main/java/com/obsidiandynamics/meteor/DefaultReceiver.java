@@ -1,6 +1,7 @@
 package com.obsidiandynamics.meteor;
 
 import com.obsidiandynamics.worker.*;
+import com.obsidiandynamics.zerolog.util.*;
 
 public final class DefaultReceiver implements Receiver {
   private final Subscriber subscriber;
@@ -20,6 +21,7 @@ public final class DefaultReceiver implements Receiver {
                      .daemon()
                      .withName(Receiver.class, subscriber.getConfig().getStreamConfig().getName(), "poller"))
         .onCycle(this::pollerCycle)
+        .onUncaughtException(new ZlgWorkerExceptionHandler(subscriber.getConfig().getZlg()))
         .buildAndStart();
   }
   

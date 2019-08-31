@@ -9,6 +9,7 @@ import com.obsidiandynamics.meteor.util.*;
 import com.obsidiandynamics.retry.*;
 import com.obsidiandynamics.worker.*;
 import com.obsidiandynamics.zerolog.*;
+import com.obsidiandynamics.zerolog.util.*;
 
 public final class Election implements Terminable, Joinable {
   private final ElectionConfig config;
@@ -44,6 +45,7 @@ public final class Election implements Terminable, Joinable {
     scavengerThread = WorkerThread.builder()
         .withOptions(new WorkerOptions().daemon().withName(Election.class, "scavenger"))
         .onCycle(this::scavegerCycle)
+        .onUncaughtException(new ZlgWorkerExceptionHandler(config.getZlg()))
         .build();
   }
   
