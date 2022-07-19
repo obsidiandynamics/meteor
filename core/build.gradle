@@ -1,16 +1,16 @@
 def packageName = "meteor-core"
-version = project(":").version
+def packageDescription = "Real-time message streaming over Hazelcast IMDG"
 
 dependencies {
-  compile project(":meteor-elect")
-  compile "com.obsidiandynamics.fulcrum:fulcrum-nodequeue:${fulcrumVersion}"
+  api project(":meteor-elect")
+  api "com.obsidiandynamics.fulcrum:fulcrum-nodequeue:${fulcrumVersion}"
   
-  testCompile project(":")
-  testCompile project(":meteor-assurance")
-  testCompile "com.obsidiandynamics.fulcrum:fulcrum-testmark:${fulcrumVersion}"
-  testCompile "org.hdrhistogram:HdrHistogram:${hdrhistogramVersion}"
-  
-  testRuntime "com.obsidiandynamics.fulcrum:fulcrum-launcher:${fulcrumVersion}"
+  testImplementation project(":")
+  testImplementation project(":meteor-assurance")
+  testImplementation "com.obsidiandynamics.fulcrum:fulcrum-testmark:${fulcrumVersion}"
+  testImplementation "org.hdrhistogram:HdrHistogram:${hdrhistogramVersion}"
+
+  testImplementation "com.obsidiandynamics.fulcrum:fulcrum-launcher:${fulcrumVersion}"
 }
 
 task launch(dependsOn: testClasses) {
@@ -34,72 +34,34 @@ task launch(dependsOn: testClasses) {
   }
 }
 
-jar {
-  baseName packageName
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-  baseName packageName
-  classifier = "javadoc"
-  from "$buildDir/docs/javadoc"
-}
- 
-task sourcesJar(type: Jar) {
-  baseName packageName
-  from sourceSets.main.allSource
-  classifier = "sources"
-}
- 
-artifacts {
-  archives jar
-  archives javadocJar
-  archives sourcesJar
-}
-
 publishing {
   publications {
     mavenJava(MavenPublication) {
-      groupId project(":").group
-      artifactId packageName
-      version project(":").version
+      artifactId = packageName
       from components.java
-      artifact sourcesJar
-      artifact javadocJar
-    }
-  }
-  repositories {
-    maven {
-      url "${project(':').projectDir}/../repo"
-    }
-  }
-}
-
-def envUser = "BINTRAY_USER"
-def envKey = "BINTRAY_KEY"
-def packageDesc = "Real-time message streaming over Hazelcast IMDG"
-def repoName = "meteor"
-bintray {
-  user = System.getenv(envUser)
-  key = System.getenv(envKey)
-  publications = ["mavenJava"]
-  pkg {
-    repo = "${repoName}"
-    name = packageName
-    userOrg = "obsidiandynamics"
-    desc = packageDesc
-    websiteUrl = "https://github.com/obsidiandynamics/${repoName}"
-    licenses = ["BSD New"]
-    vcsUrl = "https://github.com/obsidiandynamics/${repoName}"
-    issueTrackerUrl = "https://github.com/obsidiandynamics/${repoName}/issues"
-    publicDownloadNumbers = true
-    githubRepo = "obsidiandynamics/${repoName}"
-    override = true
-    publish = true
-    version {
-      name = project(":").version
-      desc = packageDesc
-      released  = new Date()
-      vcsTag = project(":").version
+      pom {
+        name = packageName
+        description = packageDescription
+        url = 'https://github.com/obsidiandynamics/meteor'
+        licenses {
+          license {
+            name = 'BSD 3-Clause License'
+            url = 'https://opensource.org/licenses/BSD-3-Clause'
+          }
+        }
+        developers {
+          developer {
+            id = 'ekoutanov'
+            name = 'Emil Koutanov'
+            email = 'ekoutanov@gmail.com'
+          }
+        }
+        scm {
+          connection = 'scm:git:git://github.com/obsidiandynamics/meteor.git'
+          developerConnection = 'scm:git:ssh://github.com/obsidiandynamics/meteor.git'
+          url = 'https://github.com/obsidiandynamics/meteor'
+        }
+      }
     }
   }
 }

@@ -1,26 +1,19 @@
 plugins {
-  id "com.jfrog.bintray" version "1.8.4"
   id "com.github.ben-manes.versions" version "0.22.0"
+  id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
 }
-apply plugin: "maven-publish"
-apply plugin: "com.jfrog.bintray"
 
-group = "com.obsidiandynamics.meteor"
-version = "0.25.0-SNAPSHOT"
-  
-def envUser = "BINTRAY_USER"
-def envKey = "BINTRAY_KEY"
-task bintrayCredentialsCheck {
-  doLast {
-    if (System.getenv(envUser) == null) {
-      throw new GradleException("No Bintray username specified; set with 'export ${envUser}=<username>'")
-    }
-    if (System.getenv(envKey) == null) {
-      throw new GradleException("No Bintray key specified; set with 'export ${envKey}=<key>'")
+nexusPublishing {
+  repositories {
+    sonatype {
+      nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+      snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+      username = findProperty('sonatype.username')
+      password = findProperty('sonatype.password')
     }
   }
 }
-
+  
 def baseJvmArgs = [
   "--add-opens=java.base/java.io=ALL-UNNAMED",
   "--add-opens=java.base/java.lang=ALL-UNNAMED",
@@ -35,75 +28,76 @@ def baseJvmArgs = [
 project.ext.set("baseJvmArgs", baseJvmArgs)
 
 allprojects {
-  apply plugin: "java"
+  apply plugin: "java-library"
   apply plugin: "jacoco"
-  apply plugin: "maven-publish"
-  apply plugin: "com.jfrog.bintray"
+  apply plugin: 'maven-publish'
+  apply plugin: 'signing'
+
+  group = "com.obsidiandynamics.meteor"
+  version = "0.25.0-SNAPSHOT"
   
   sourceCompatibility = 1.8
   targetCompatibility = 1.8
 
+  //TODO remove when Javadoc errors have been resolved
+  javadoc.options.addStringOption('Xdoclint:none', '-quiet')
+
   repositories {
-    jcenter()
+    mavenCentral()
     maven {
       url "https://oss.sonatype.org/content/repositories/snapshots"
     }
   }
+
+  java {
+    withJavadocJar()
+    withSourcesJar()
+  }
+
+  signing {
+    sign publishing.publications
+  }
   
   ext {
     commonsLangVersion = "3.9"
-    equalsverifierVersion = "3.1.9"
-    fulcrumVersion = "0.36.0"
+    equalsverifierVersion = "3.10"
+    fulcrumVersion = "0.37.0"
     hdrhistogramVersion = "2.1.11"
     junitVersion = "4.12"
     hazelcastVersion = "3.12.2"
     log4jVersion = "1.2.17"
     mockitoVersion = "3.0.0"
     slf4jVersion = "1.7.25"
-    yconfVersion = "0.20.0"
-    zerologVersion = "0.30.0"
+    yconfVersion = "0.21.0"
+    zerologVersion = "0.31.0"
   }
   
   dependencies {
     compileOnly "com.hazelcast:hazelcast:${hazelcastVersion}"
     
-    testCompile "com.hazelcast:hazelcast:${hazelcastVersion}"
-    testCompile "com.hazelcast:hazelcast:${hazelcastVersion}:tests"
-    testCompile "com.obsidiandynamics.fulcrum:fulcrum-assert:${fulcrumVersion}"
-    testCompile "com.obsidiandynamics.fulcrum:fulcrum-await:${fulcrumVersion}"
-    testCompile "com.obsidiandynamics.fulcrum:fulcrum-junit:${fulcrumVersion}"
-    testCompile "com.obsidiandynamics.yconf:yconf-snakeyaml:${yconfVersion}"
-    testCompile "junit:junit:${junitVersion}"
-    testCompile "org.mockito:mockito-core:${mockitoVersion}"
-    testCompile "nl.jqno.equalsverifier:equalsverifier:${equalsverifierVersion}"
-    testRuntime "com.obsidiandynamics.zerolog:zerolog-slf4j17:${zerologVersion}"
-    testRuntime "org.slf4j:slf4j-api:${slf4jVersion}"
-    testRuntime "org.slf4j:slf4j-log4j12:${slf4jVersion}"
-    testRuntime "log4j:log4j:${log4jVersion}"
+    testImplementation "com.hazelcast:hazelcast:${hazelcastVersion}"
+    testImplementation "com.hazelcast:hazelcast:${hazelcastVersion}:tests"
+    testImplementation "com.obsidiandynamics.fulcrum:fulcrum-assert:${fulcrumVersion}"
+    testImplementation "com.obsidiandynamics.fulcrum:fulcrum-await:${fulcrumVersion}"
+    testImplementation "com.obsidiandynamics.fulcrum:fulcrum-junit:${fulcrumVersion}"
+    testImplementation "com.obsidiandynamics.yconf:yconf-snakeyaml:${yconfVersion}"
+    testImplementation "junit:junit:${junitVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "nl.jqno.equalsverifier:equalsverifier:${equalsverifierVersion}"
+
+    testImplementation "com.obsidiandynamics.zerolog:zerolog-slf4j17:${zerologVersion}"
+    testImplementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    testImplementation "org.slf4j:slf4j-log4j12:${slf4jVersion}"
+    testImplementation "log4j:log4j:${log4jVersion}"
   }
     
-  compileJava {
-    options.compilerArgs += "-proc:none"
-    options.compilerArgs += "-Xlint:unchecked"
-  }
-
-  compileTestJava {
-    options.compilerArgs += "-proc:none"
-    options.compilerArgs += "-Xlint:unchecked"
-  }
-  
-  tasks.withType(JavaCompile) {
-    options.fork = true
-    options.incremental = true
-  }
-
   test {
     exclude "**/*IT.class"
     jvmArgs += baseJvmArgs
   }
   
   jacoco {
-    toolVersion = "0.8.4"
+    toolVersion = "0.8.8"
   }
   
   jacocoTestReport {
@@ -116,20 +110,11 @@ allprojects {
       csv.enabled false
     }
   }
-
-  // invoke this task when ready to publish to Bintray
-  bintrayUpload {
-    dependsOn ":bintrayCredentialsCheck"
-    dependsOn "jar"
-    dependsOn "sourcesJar"
-    dependsOn "javadocJar"
-    dependsOn "generatePomFileForMavenJavaPublication"
-  }
 }
 
 subprojects {
   dependencies {
-    testCompile project(":").sourceSets.test.output
+    testImplementation project(":").sourceSets.test.output
   }
 }
 
@@ -164,80 +149,44 @@ task jacocoRootReport(type: JacocoReport) {
 }
 
 def packageName = "meteor-common"
+def packageDescription = "Common classes and utilities"
 
 dependencies {
-  compile "com.obsidiandynamics.fulcrum:fulcrum-retry:${fulcrumVersion}"
-  compile "com.obsidiandynamics.fulcrum:fulcrum-worker:${fulcrumVersion}"
-  compile "com.obsidiandynamics.yconf:yconf-core:${yconfVersion}"
-  compile "com.obsidiandynamics.zerolog:zerolog-core:${zerologVersion}"
-  compile "com.obsidiandynamics.zerolog:zerolog-bridge-hazelcast:${zerologVersion}"
-}
-
-jar {
-  baseName packageName
-  finalizedBy jacocoRootReport
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-  baseName packageName
-  classifier = "javadoc"
-  from "$buildDir/docs/javadoc"
-}
- 
-task sourcesJar(type: Jar) {
-  baseName packageName
-  from sourceSets.main.allSource
-  classifier = "sources"
-}
- 
-artifacts {
-  archives jar
-  archives javadocJar
-  archives sourcesJar
+  api "com.obsidiandynamics.fulcrum:fulcrum-retry:${fulcrumVersion}"
+  api "com.obsidiandynamics.fulcrum:fulcrum-worker:${fulcrumVersion}"
+  api "com.obsidiandynamics.yconf:yconf-core:${yconfVersion}"
+  api "com.obsidiandynamics.zerolog:zerolog-core:${zerologVersion}"
+  api "com.obsidiandynamics.zerolog:zerolog-bridge-hazelcast:${zerologVersion}"
 }
 
 publishing {
   publications {
     mavenJava(MavenPublication) {
-      groupId project(":").group
-      artifactId packageName
-      version project(":").version
+      artifactId = packageName
       from components.java
-      artifact sourcesJar
-      artifact javadocJar
-    }
-  }
-  repositories {
-    maven {
-      url "${project(":").projectDir}/../repo"
-    }
-  }
-}
-
-def packageDesc = "Common classes and utilities"
-def repoName = "meteor"
-bintray {
-  user = System.getenv(envUser)
-  key = System.getenv(envKey)
-  publications = ["mavenJava"]
-  pkg {
-    repo = "${repoName}"
-    name = packageName
-    userOrg = "obsidiandynamics"
-    desc = packageDesc
-    websiteUrl = "https://github.com/obsidiandynamics/${repoName}"
-    licenses = ["BSD New"]
-    vcsUrl = "https://github.com/obsidiandynamics/${repoName}"
-    issueTrackerUrl = "https://github.com/obsidiandynamics/${repoName}/issues"
-    publicDownloadNumbers = true
-    githubRepo = "obsidiandynamics/${repoName}"
-    override = true
-    publish = true
-    version {
-      name = project(":").version
-      desc = packageDesc
-      released  = new Date()
-      vcsTag = project(":").version
+      pom {
+        name = packageName
+        description = packageDescription
+        url = 'https://github.com/obsidiandynamics/meteor'
+        licenses {
+          license {
+            name = 'BSD 3-Clause License'
+            url = 'https://opensource.org/licenses/BSD-3-Clause'
+          }
+        }
+        developers {
+          developer {
+            id = 'ekoutanov'
+            name = 'Emil Koutanov'
+            email = 'ekoutanov@gmail.com'
+          }
+        }
+        scm {
+          connection = 'scm:git:git://github.com/obsidiandynamics/meteor.git'
+          developerConnection = 'scm:git:ssh://github.com/obsidiandynamics/meteor.git'
+          url = 'https://github.com/obsidiandynamics/meteor'
+        }
+      }
     }
   }
 }

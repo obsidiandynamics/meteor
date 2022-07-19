@@ -3,6 +3,7 @@ package com.obsidiandynamics.meteor.sample;
 import com.hazelcast.config.*;
 import com.hazelcast.core.*;
 import com.obsidiandynamics.meteor.*;
+import com.obsidiandynamics.meteor.Record;
 import com.obsidiandynamics.zerolog.*;
 
 public final class SyncPubSubSample {
