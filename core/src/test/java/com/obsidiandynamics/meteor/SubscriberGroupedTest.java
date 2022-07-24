@@ -48,8 +48,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
 
   /**
    *  Consuming from an empty buffer should result in a zero-size batch.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testConsumeEmpty() throws InterruptedException {
@@ -88,8 +87,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
    *  test verifies the responsiveness of {@code poll()} during a lease transfer. (Behind the scenes, the
    *  long poll should be split into a series of short polls if the subscriber is unassigned, so that
    *  assignment is quickly picked up by the poller.)
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testNotAssignedFollowedByAssignment() throws InterruptedException {
@@ -148,8 +146,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
    *  Tests consuming of messages, and that {@code Subscriber#poll(long)} extends
    *  the lease in the background. Also checks that we can confirm the offset of
    *  the last consumed message.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testConsumeExtendLeaseAndConfirm() throws InterruptedException {
@@ -229,8 +226,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
    *  Tests consuming of messages, and that {@code Subscriber#poll(long)} extends
    *  the lease in the background, subject to the constraints of {@code minLeaseExtendInterval},
    *  which should prevent the least from being extended unnecessarily during aggressive polling.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testConsumeExtendLeaseMinInterval() throws InterruptedException {
@@ -367,8 +363,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
   /**
    *  Tests the failure of a confirmation when the subscriber isn't the current tenant,
    *  followed by a deactivate which should err internally but stay silent.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testConfirmFailureAndDeactivateSuppression() throws InterruptedException {
@@ -430,8 +425,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
    *  
    *  When this error is detected, the test is also rigged to evict the subscriber's tenancy from the
    *  lease map, thereby creating a second error when a lease extension is attempted.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testPollReadFailureAndExtendFailure() throws InterruptedException {
@@ -491,8 +485,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
   
   /**
    *  Tests the {@link InitialOffsetScheme#EARLIEST} offset initialisation.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testInitialOffsetEarliest() throws InterruptedException {
@@ -525,8 +518,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
   
   /**
    *  Tests the {@link InitialOffsetScheme#LATEST} offset initialisation.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testInitialOffsetLatest() throws InterruptedException {
@@ -560,11 +552,10 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
   /**
    *  Tests the {@link InitialOffsetScheme#NONE} offset initialisation. Because no offset
    *  has been written to the offsets map, this operation will fail.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test(expected=OffsetLoadException.class)
-  public void testInitialOffsetNone() throws InterruptedException {
+  public void testInitialOffsetNone() {
     final String stream = "s";
     final String group = randomGroup();
     final int capacity = 10;
@@ -584,8 +575,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
    *  Tests two subscribers competing for the same stream. Deactivation and reactivation is used
    *  to test lease reassignment and verify that one subscriber can continue where the other has
    *  left off.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testTwoSubscribersWithActivation() throws InterruptedException {
@@ -693,8 +683,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
   /**
    *  Tests two subscribers using two separate groups. Each subscriber will receive the
    *  same messages.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testTwoSubscribersTwoGroups() throws InterruptedException {
@@ -762,8 +751,7 @@ public final class SubscriberGroupedTest extends AbstractPubSubTest {
   /**
    *  Tests two subscribers with two separate streams but using identical group IDs. Each subscriber will 
    *  receive messages from its own stream -- there are no interactions among groups for different streams.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testTwoSubscribersTwoStreams() throws InterruptedException {

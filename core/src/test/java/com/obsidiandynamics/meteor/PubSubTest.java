@@ -91,11 +91,11 @@ public final class PubSubTest extends AbstractPubSubTest {
     
     // wait until all publish confirmations have been processed
     wait.until(() -> {
-      final int completedFutures = (int) futures.stream().filter(f -> f.isDone()).count();
+      final int completedFutures = (int) futures.stream().filter(CompletableFuture::isDone).count();
       assertEquals(numMessages, completedFutures);
     });
     
-    final int errorredFutures = (int) futures.stream().filter(f -> f.isCompletedExceptionally()).count();
+    final int errorredFutures = (int) futures.stream().filter(CompletableFuture::isCompletedExceptionally).count();
     assertEquals(0, errorredFutures);
     
     // verify received messages; if a failure is detected, deep dive into the contents for debugging

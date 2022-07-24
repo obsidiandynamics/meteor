@@ -5,7 +5,7 @@ import static com.obsidiandynamics.func.Functions.*;
 import java.util.*;
 
 interface ScavengeWatcher {
-  static ScavengeWatcher nop = new ScavengeWatcher() {
+  ScavengeWatcher nop = new ScavengeWatcher() {
     @Override 
     public void onExpire(String resource, UUID tenant) {
       mustExist(resource);

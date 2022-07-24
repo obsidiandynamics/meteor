@@ -1,5 +1,6 @@
 package com.obsidiandynamics.meteor;
 
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
@@ -108,7 +109,7 @@ public class RingbufferFailoverSim {
     }
     
     private void receiveCycle(WorkerThread t) throws InterruptedException {
-      final ICompletableFuture<ReadResultSet<byte[]>> f = buffer.readManyAsync(nextSequence, 1, 1000, bytes -> bytes != null);
+      final ICompletableFuture<ReadResultSet<byte[]>> f = buffer.readManyAsync(nextSequence, 1, 1000, Objects::nonNull);
       try {
         final ReadResultSet<byte[]> results = f.get(pollTimeoutMillis, TimeUnit.MILLISECONDS);
         nextSequence = results.getSequence(results.size() - 1) + 1;

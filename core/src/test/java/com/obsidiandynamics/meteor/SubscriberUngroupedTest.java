@@ -72,8 +72,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
 
   /**
    *  Tests consuming from an empty buffer. Should result in a zero-size batch.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testConsumeEmpty() throws InterruptedException {
@@ -101,8 +100,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
 
   /**
    *  Simple scenario of consuming a single message.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testConsumeOne() throws InterruptedException {
@@ -132,8 +130,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
 
   /**
    *  Consumes two messages.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testConsumeTwo() throws InterruptedException {
@@ -166,8 +163,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
   /**
    *  Tests the consumption of two messages and then a seek back by one position, so that the last
    *  message can be consumed again.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testSeek() throws InterruptedException {
@@ -196,11 +192,10 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
   
   /**
    *  Tests a seek to an illegal position.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test(expected=IllegalArgumentException.class)
-  public void testSeekIllegalArgumentTooLow() throws InterruptedException {
+  public void testSeekIllegalArgumentTooLow() {
     final String stream = "s";
     final int capacity = 10;
 
@@ -213,8 +208,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
   
   /**
    *  Tests a seek to a position outside of the buffer's allowable range.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testSeekIllegalArgumentBeyondLastOffset() throws InterruptedException {
@@ -236,8 +230,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
   
   /**
    *  Tests read failure by rigging the ringbuffer to throw an exception when reading.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testReadFailure() throws InterruptedException {
@@ -279,8 +272,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
    *  storage, so that the subscriber consumes from a stale sequence. The subscriber, having
    *  noticed the stale offset, should fast-forward the next read offset to the next safe read
    *  position, plus a small safety buffer (which for this test we've set to zero).
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testStaleRead() throws InterruptedException {
@@ -307,8 +299,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
 
   /**
    *  Tests initialising to the earliest offset.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testInitialOffsetEarliest() throws InterruptedException {
@@ -338,8 +329,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
   
   /**
    *  Tests initialising to the latest offset.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test
   public void testInitialOffsetLatest() throws InterruptedException {
@@ -370,11 +360,10 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
   /**
    *  Tests the {@link InitialOffsetScheme#NONE} offset initialisation, which is only allowed in
    *  a grouped context.
-   *  
-   *  @throws InterruptedException
+   *
    */
   @Test(expected=InvalidInitialOffsetSchemeException.class)
-  public void testInitialOffsetNone() throws InterruptedException {
+  public void testInitialOffsetNone() {
     final String stream = "s";
     final int capacity = 10;
     
@@ -409,9 +398,7 @@ public final class SubscriberUngroupedTest extends AbstractPubSubTest {
     buffer.add("h1".getBytes());
     
     wait.until(() -> {
-      try {
-        verify(handler, times(2)).onRecord(isNotNull());
-      } catch (InterruptedException e) {}
+      verify(handler, times(2)).onRecord(isNotNull());
     });
     verifyNoError(eh);
     

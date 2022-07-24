@@ -123,7 +123,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
                          obj.getServiceName(), partition.getPartitionId(), partition.getOwner());
   }
   
-  private static final long computeWait(long wakeTime, long maxSleepMillis) {
+  private static long computeWait(long wakeTime, long maxSleepMillis) {
     return Math.min(Math.max(0, wakeTime - System.currentTimeMillis()), maxSleepMillis);
   }
 
@@ -166,6 +166,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
                                            nextReadOffset, config.getStreamConfig().getName(), serviceInfo);
             config.getExceptionHandler().onException(m, e.getCause());
             f.cancel(true);
+            //noinspection BusyWait
             Thread.sleep(waitMillis);
             return RecordBatch.empty();
           }
@@ -181,6 +182,7 @@ public final class DefaultSubscriber implements Subscriber, Joinable {
         nextReadOffset = Record.UNASSIGNED_OFFSET;
         final long sleepMillis = computeWait(wake, MAX_UNASSIGNED_SLEEP_MILLIS);
         if (sleepMillis > 0) {
+          //noinspection BusyWait
           Thread.sleep(sleepMillis);
         } else {
           return RecordBatch.empty();

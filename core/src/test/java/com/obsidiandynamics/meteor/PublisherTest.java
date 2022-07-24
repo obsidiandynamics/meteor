@@ -33,9 +33,7 @@ public final class PublisherTest extends AbstractPubSubTest {
 
   /**
    *  Publishes to a bounded buffer, where the backing store is a NOP.
-   *  
-   *  @throws InterruptedException
-   *  @throws ExecutionException
+   *
    */
   @Test
   public void testPublishToBoundedBuffer() throws InterruptedException, ExecutionException {
@@ -78,9 +76,7 @@ public final class PublisherTest extends AbstractPubSubTest {
   
   /**
    *  Publishes to a buffer that uses a simple {@link HeapRingbufferStore} as its backing store.
-   *  
-   *  @throws InterruptedException
-   *  @throws ExecutionException
+   *
    */
   @Test
   public void testPublishToStoredBuffer() throws InterruptedException, ExecutionException {
@@ -119,9 +115,7 @@ public final class PublisherTest extends AbstractPubSubTest {
   
   /**
    *  Tests direct publishing.
-   *  
-   *  @throws ExecutionException 
-   *  @throws InterruptedException 
+   *
    */
   @Test
   public void testPublishDirect() throws InterruptedException, ExecutionException {
@@ -165,7 +159,7 @@ public final class PublisherTest extends AbstractPubSubTest {
     when(mockInstance.getConfig()).thenReturn(realInstance.getConfig());
     final RuntimeException cause = new RuntimeException("error");
     when(mockBuffer.addAllAsync(any(), any())).then(invocation -> {
-      return new CompletedFuture<>(null, cause, r -> r.run());
+      return new CompletedFuture<>(null, cause, Runnable::run);
     });
 
     final DefaultPublisher p =
@@ -200,12 +194,7 @@ public final class PublisherTest extends AbstractPubSubTest {
   /**
    *  Reads the remaining contents of the ringbuffer from a given starting point, automatically fast-forwarding 
    *  the starting point if a {@link StaleSequenceException} is caught.
-   *  
-   *  @param buffer
-   *  @param startSequence
-   *  @return
-   *  @throws InterruptedException
-   *  @throws ExecutionException
+   *
    */
   private static List<byte[]> readRemaining(Ringbuffer<byte[]> buffer, long startSequence) throws InterruptedException, ExecutionException {
     long adjStartSequence = startSequence;
@@ -235,7 +224,7 @@ public final class PublisherTest extends AbstractPubSubTest {
   }
 
   private static List<TestCallback> completed(List<TestCallback> callbacks) {
-    return callbacks.stream().filter(c -> c.isComplete()).collect(Collectors.toList());
+    return callbacks.stream().filter(TestCallback::isComplete).collect(Collectors.toList());
   }
 
   private static void assertNoError(List<TestCallback> callbacks) {

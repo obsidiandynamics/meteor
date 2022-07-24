@@ -15,7 +15,7 @@ public class MapBandwidthSim {
   
   private MapBandwidthSim() {}
   
-  private class TestWriter {
+  private static class TestWriter {
     private final int writeIntervalMillis;
     private final byte[] bytes;
     private final IMap<Integer, byte[]> map;
@@ -52,7 +52,7 @@ public class MapBandwidthSim {
     }
   }
   
-  private class TestReader {
+  private static class TestReader {
     private final int readIntervalMillis;
     private final IMap<Integer, byte[]> map;
     

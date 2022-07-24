@@ -3,7 +3,7 @@ package com.obsidiandynamics.meteor;
 import java.util.*;
 
 public interface RecordBatch extends Iterable<Record> {
-  final RecordBatch empty = new RecordBatch() {
+  RecordBatch empty = new RecordBatch() {
     @Override
     public int size() {
       return 0;
@@ -15,7 +15,7 @@ public interface RecordBatch extends Iterable<Record> {
     }
   };
   
-  public static RecordBatch empty() { return empty; }
+  static RecordBatch empty() { return empty; }
 
   int size();
 

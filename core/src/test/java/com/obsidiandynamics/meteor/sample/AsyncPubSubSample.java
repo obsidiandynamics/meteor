@@ -8,7 +8,7 @@ import com.obsidiandynamics.threads.*;
 import com.obsidiandynamics.zerolog.*;
 
 public final class AsyncPubSubSample {
-  public static void main(String[] args) throws InterruptedException {
+  public static void main(String[] args) {
     // set up a Zerolog logger and bridge from Hazelcast's internal logger
     final Zlg zlg = Zlg.forDeclaringClass().get();
     HazelcastZlgBridge.install();

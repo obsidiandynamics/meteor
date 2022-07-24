@@ -86,21 +86,21 @@ public abstract class AbstractPubSubTest {
     return (DefaultSubscriber) register(Subscriber.createDefault(instance, config), terminables);
   }
   
-  protected static final <T> T register(T item, Collection<? super T> container) {
+  protected static <T> T register(T item, Collection<? super T> container) {
     container.add(item);
     return item;
   }
   
-  protected static final String randomGroup() {
+  protected static String randomGroup() {
     final UUID random = UUID.randomUUID();
     return "group-" + Long.toHexString(random.getMostSignificantBits() ^ random.getLeastSignificantBits());
   }
   
-  protected static final ExceptionHandler mockExceptionHandler() {
+  protected static ExceptionHandler mockExceptionHandler() {
     return mockExceptionHandler(Zlg.nop());
   }
   
-  protected static final ExceptionHandler mockExceptionHandler(Zlg zlg) {
+  protected static ExceptionHandler mockExceptionHandler(Zlg zlg) {
     final ExceptionHandler mock = mock(ExceptionHandler.class);
     doAnswer(invocation -> {
       final String summary = invocation.getArgument(0);
@@ -111,11 +111,11 @@ public abstract class AbstractPubSubTest {
     return mock;
   }
   
-  protected static final void verifyNoError(ExceptionHandler... mockExceptionHandlers) {
+  protected static void verifyNoError(ExceptionHandler... mockExceptionHandlers) {
     Arrays.stream(mockExceptionHandlers).forEach(AbstractPubSubTest::verifyNoError);
   }
   
-  protected static final void verifyNoError(ExceptionHandler mockExceptionHandler) {
+  protected static void verifyNoError(ExceptionHandler mockExceptionHandler) {
     verify(mockExceptionHandler, never()).onException(any(), any());
   }
 }

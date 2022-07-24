@@ -40,7 +40,7 @@ public final class ElectionTest {
   @After
   public void after() {
     Terminator.of(elections).terminate().joinSilently();
-    instances.forEach(h -> h.shutdown());
+    instances.forEach(HazelcastInstance::shutdown);
   }
   
   private HazelcastInstance newInstance() {
@@ -118,8 +118,6 @@ public final class ElectionTest {
 
   /**
    *  Single node trying to elect a candidate from a clean slate (no prior tenants).
-   *  
-   *  @throws NotTenantException
    */
   @Test
   public void testSingleNodeElectFromVacantAndTouchYield() throws NotTenantException {
@@ -168,8 +166,6 @@ public final class ElectionTest {
   
   /**
    *  Two nodes, both trying to elect the same candidate.
-   *  
-   *  @throws NotTenantException
    */
   @Test
   public void testTwoNodesOneCandidateElectFromVacant() throws NotTenantException {
@@ -224,8 +220,6 @@ public final class ElectionTest {
 
   /**
    *  Two nodes, each trying to elect its own candidate for the same resource.
-   *  
-   *  @throws NotTenantException
    */
   @Test
   public void testTwoNodesTwoCandidatesElectFromVacant() throws NotTenantException {
@@ -291,11 +285,10 @@ public final class ElectionTest {
    *  a competing process) changes the contents of the lease map and thereby fails the CAS operation
    *  on the {@link IMap}. In other words, this simulates the race condition that a CAS is supposed to
    *  guard against.
-   *  
-   *  @throws NotTenantException
+   *
    */
   @Test
-  public void testSingleNodeElectFromVacantMissed() throws NotTenantException {
+  public void testSingleNodeElectFromVacantMissed() {
     final HazelcastInstance instance = newInstance();
     final ScavengeWatcher scavengeWatcher = mockScavengeWatcher();
     final int leaseDuration = 60_000;
@@ -320,11 +313,10 @@ public final class ElectionTest {
   /**
    *  Tests the extending of a lease from a node that wasn't the initiator of the election. This
    *  first requires that the node update its lease view.
-   *  
-   *  @throws NotTenantException
+   *
    */
   @Test
-  public void testSingleNodeElectFromOtherAndExtend() throws NotTenantException {
+  public void testSingleNodeElectFromOtherAndExtend() {
     final HazelcastInstance instance = newInstance();
     final ScavengeWatcher scavengeWatcher = mockScavengeWatcher();
     final int leaseDuration = 60_000;
@@ -350,8 +342,6 @@ public final class ElectionTest {
   /**
    *  Tests the extending of a lease by a consumer that doesn't hold the lease and, in fact, the tenancy
    *  is vacant.
-   *  
-   *  @throws NotTenantException
    */
   @Test(expected=NotTenantException.class)
   public void testSingleNodeTouchNotTenantVacant() throws NotTenantException {
@@ -371,8 +361,6 @@ public final class ElectionTest {
   /**
    *  Tests the extending of a lease by a consumer that doesn't hold the lease, which is held by another
    *  tenant.
-   *  
-   *  @throws NotTenantException
    */
   @Test(expected=NotTenantException.class)
   public void testSingleNodeTouchNotTenantOther() throws NotTenantException {
@@ -398,8 +386,6 @@ public final class ElectionTest {
    *  Simulates a race condition where a tenant holding a lease attempts to extend it, but the lease
    *  is transferred to another tenant behind the scenes. This tests the CAS operation that guards
    *  against the race condition.
-   *  
-   *  @throws NotTenantException
    */
   @Test(expected=NotTenantException.class)
   public void testSingleNodeTouchNotTenantBackgroundReElection() throws NotTenantException {
@@ -434,8 +420,6 @@ public final class ElectionTest {
   /**
    *  Tests the yield of a lease by a consumer that doesn't hold the lease and, in fact, the tenancy
    *  is vacant.
-   *  
-   *  @throws NotTenantException
    */
   @Test(expected=NotTenantException.class)
   public void testSingleNodeYieldNotTenantVacant() throws NotTenantException {
@@ -456,8 +440,6 @@ public final class ElectionTest {
    *  Simulates a race condition where a tenant holding a lease attempts to yield it, but the lease
    *  is transferred to another tenant behind the scenes. This tests the CAS operation that guards
    *  against the race condition.
-   *  
-   *  @throws NotTenantException
    */
   @Test(expected=NotTenantException.class)
   public void testSingleNodeYieldNotTenantBackgroundReElection() throws NotTenantException {

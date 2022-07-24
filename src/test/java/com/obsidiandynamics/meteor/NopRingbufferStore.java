@@ -11,8 +11,8 @@ public final class NopRingbufferStore implements RingbufferStore<Object> {
     
     private static final Factory instance = new Factory();
     
-    public static Factory getInstance() { return instance; };
-    
+    public static Factory getInstance() { return instance; }
+
     @Override
     public NopRingbufferStore newRingbufferStore(String name, Properties properties) {
       return NopRingbufferStore.instance;

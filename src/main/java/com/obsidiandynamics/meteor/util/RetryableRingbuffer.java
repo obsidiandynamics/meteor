@@ -33,6 +33,6 @@ public final class RetryableRingbuffer<E> {
   }
 
   public long tailSequence() {
-    return retry.run(() -> ringbuffer.tailSequence());
+    return retry.run(ringbuffer::tailSequence);
   }
 }

@@ -14,7 +14,7 @@ public final class Bandwidth {
     private final long bits;
     private final String symbol;
     
-    private Unit(long bits, String symbol) { this.bits = bits; this.symbol = symbol; }
+    Unit(long bits, String symbol) { this.bits = bits; this.symbol = symbol; }
 
     public long getBits() {
       return bits;

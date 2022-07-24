@@ -56,7 +56,7 @@ public final class PubSubRoundTripTest extends AbstractPubSubTest {
     void go(Publisher publisher, Record record);
   }
   
-  private final void testRoundTrip(int numMessages, boolean direct, InstancePool instancePool, RoundTripOptions options) {
+  private void testRoundTrip(int numMessages, boolean direct, InstancePool instancePool, RoundTripOptions options) {
     final String streamRequest = "request";
     final String streamReply = "reply";
     final int capacity = numMessages;

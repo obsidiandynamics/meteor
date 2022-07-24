@@ -92,6 +92,7 @@ final class DefaultPublisher implements Publisher, Joinable {
         } else if (yields++ < PUBLISH_MAX_YIELDS) {
           Thread.yield();
         } else {
+          //noinspection BusyWait
           Thread.sleep(PUBLISH_BACKOFF_MILLIS);
         }
         return;
