@@ -2,10 +2,10 @@
 ===
 Real-time message streaming over a Hazelcast in-memory data grid.
 
-[![Download](https://api.bintray.com/packages/obsidiandynamics/meteor/meteor-core/images/download.svg) ](https://bintray.com/obsidiandynamics/meteor/meteor-core/_latestVersion)
-[![Build](https://travis-ci.org/obsidiandynamics/meteor.svg?branch=master) ](https://travis-ci.org/obsidiandynamics/meteor#)
+[![Maven release](https://img.shields.io/maven-metadata/v.svg?color=blue&label=maven-central&metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fobsidiandynamics%2Fmeteor%2Fmeteor-core%2Fmaven-metadata.xml)](https://mvnrepository.com/artifact/com.obsidiandynamics.meteor)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/obsidiandynamics/meteor.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/obsidiandynamics/meteor/alerts/)
+[![Gradle build](https://github.com/obsidiandynamics/meteor/actions/workflows/master.yml/badge.svg)](https://github.com/obsidiandynamics/meteor/actions/workflows/master.yml)
 [![codecov](https://codecov.io/gh/obsidiandynamics/meteor/branch/master/graph/badge.svg)](https://codecov.io/gh/obsidiandynamics/meteor)
-[![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/obsidiandynamics/meteor.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/obsidiandynamics/meteor/context:java)
 
 # What is Meteor
 **TL;DR** — Meteor is a broker-less, lightweight embeddable alternative to Kafka/Kinesis that runs in an in-memory data grid.
@@ -163,23 +163,23 @@ Meteor lets you transparently access historical records beyond the buffer's capa
 
 # Getting Started
 ## Dependencies
-Gradle builds are hosted on JCenter. Add the following snippet to your build file, replacing `x.y.z` with the version shown on the Download badge at the top of this README.
+Add the following snippet to your build file, replacing `x.y.z` with the version shown on the Download badge at the top of this README.
 
 ```groovy
-compile "com.obsidiandynamics.meteor:meteor-core:x.y.z"
-compile "com.hazelcast:hazelcast:3.10"
+api "com.obsidiandynamics.meteor:meteor-core:x.y.z"
+api "com.hazelcast:hazelcast:3.10"
 ```
 
-**Note:** Although Meteor is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with Meteor. This lets you to use any 3.9+ API-compatible Hazelcast client library in your application.
+**Note:** Although Meteor is compiled against Hazelcast 3.10, no specific Hazelcast client library dependency has been bundled with Meteor. This lets you use any 3.9+ API-compatible Hazelcast client library in your application.
 
 Meteor is packaged as two separate modules:
 
 1. `meteor-core` — The Meteor implementation. This is the only module you need in production.
-2. `meteor-assurance` — Mocking components and test utilities. Normally, this module would only be used during testing and should be declared in the `testCompile` configuration. See below.
+2. `meteor-assurance` — Mocking components and test utilities. Normally, this module would only be used during testing and should be declared in the `testImplementation` configuration. See below.
 
 ```groovy
-testCompile "com.obsidiandynamics.meteor:meteor-assurance:x.y.z"
-testCompile "com.hazelcast:hazelcast:3.10:tests"
+testImplementation "com.obsidiandynamics.meteor:meteor-assurance:x.y.z"
+testImplementation "com.hazelcast:hazelcast:3.10:tests"
 ```
 
 ## A pub-sub example
@@ -298,16 +298,16 @@ final StreamConfig streamConfig = new StreamConfig().withName("test-stream");
 
 // create a publisher and send a message
 final Publisher publisher = Publisher.createDefault(instance,
-                                                    new PublisherConfig()
-                                                    .withStreamConfig(streamConfig));
+                                                   new PublisherConfig()
+                                                   .withStreamConfig(streamConfig));
 
 publisher.publishAsync(new Record("Hello world".getBytes()));
 
 // create a subscriber for a test group and poll for records
 final Subscriber subscriber = Subscriber.createDefault(instance, 
-                                                       new SubscriberConfig()
-                                                       .withStreamConfig(streamConfig)
-                                                       .withGroup("test-group"));
+                                                      new SubscriberConfig()
+                                                      .withStreamConfig(streamConfig)
+                                                      .withGroup("test-group"));
 // receive records asynchronously; polls every 100 ms
 subscriber.attachReceiver(record -> {
   zlg.i("Got %s", z -> z.arg(new String(record.getData())));
@@ -360,7 +360,7 @@ Meteor (like other streaming platforms) offloads the responsibility of dealing w
 
 A subscriber should generally err on the side of caution, not placing excessive trust in the quality of published messages, especially when messages originate from a different ecosystem or in low assurance environments. A good practice is to surround the receipt of a record with a `try-catch` block, trapping and logging all exceptions, up to `Throwable`.
 
-**Note:** We're not implying that a DLQ is entirely useless or is an anti-pattern; the claim is merely that a DLQ is not strictly necessary for the construction of robust message-oriented systems and that alternate patterns may be used.
+**Note:** We're not implying that a DLQ is entirely useless or is an antipattern; the claim is merely that a DLQ is not strictly necessary for the construction of robust message-oriented systems and that alternate patterns may be used.
 
 
 # Architecture
