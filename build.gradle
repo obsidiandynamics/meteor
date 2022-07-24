@@ -150,6 +150,10 @@ dependencies {
   api "com.obsidiandynamics.zerolog:zerolog-bridge-hazelcast:${zerologVersion}"
 }
 
+jar {
+  finalizedBy jacocoRootReport
+}
+
 publishing {
   publications {
     mavenJava(MavenPublication) {
