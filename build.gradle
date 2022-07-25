@@ -34,7 +34,7 @@ allprojects {
   apply plugin: 'signing'
 
   group = "com.obsidiandynamics.meteor"
-  version = "0.26.0"
+  version = "0.27.0-SNAPSHOT"
   
   sourceCompatibility = 1.8
   targetCompatibility = 1.8
